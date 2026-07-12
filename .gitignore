@@ -1,0 +1,23 @@
+# Datos — nunca se suben
+# DeepFashion supera los 20 GB; dos fuentes prohíben la redistribución
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Entorno
+.env
+*.log
+
+# Modelos y artefactos
+*.pt
+*.pth
+*.ckpt
+models/
+
+# Sistema
+.DS_Store
