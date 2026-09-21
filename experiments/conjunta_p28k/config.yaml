@@ -1,0 +1,16 @@
+condicion: conjunta_p28k
+dim: 128
+mlp: false
+epocas: 30
+batch_size: 2048
+lr: 0.001
+tau: 0.07
+weight_decay: 0.0001
+seed: 42
+presupuesto_datos: 28481
+n_train: 109012
+grupos:
+- todos
+minutos: 0.05
+torch: 2.11.0+cu128
+backbone: congelado, embeddings precalculados

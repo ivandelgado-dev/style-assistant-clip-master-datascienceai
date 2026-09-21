@@ -1,0 +1,52 @@
+emb_armario: data\embeddings_armario
+armario_csv: data\raw\wardrobe\armario.csv
+pares: data\raw\wardrobe\pares.csv
+toma: a
+emb_corpus: data\embeddings
+split_indice: test
+experimentos:
+- experiments\conjunta
+- experiments\por_atributo
+k: 10
+seed: 42
+n_armario: 236
+n_indice: 21883
+grupo_deepfashion:
+  Tee: camiseta
+  Henley: camiseta
+  Button-Down: camisa
+  Flannel: camisa
+  Hoodie: sudadera
+  Sweater: jersey
+  Jersey: jersey
+  Turtleneck: jersey
+  Cardigan: cardigan
+  Blazer: chaqueta
+  Jacket: chaqueta
+  Bomber: chaqueta
+  Anorak: chaqueta
+  Coat: abrigo
+  Parka: abrigo
+  Peacoat: abrigo
+  Jeans: pantalon_largo
+  Chinos: pantalon_largo
+  Joggers: pantalon_largo
+  Sweatpants: pantalon_largo
+  Shorts: pantalon_corto
+  Cutoffs: pantalon_corto
+  Sweatshorts: pantalon_corto
+grupo_armario:
+  camiseta: camiseta
+  camisa: camisa
+  sudadera: sudadera
+  jersey: jersey
+  cardigan: cardigan
+  chaqueta: chaqueta
+  cazadora: chaqueta
+  blazer: chaqueta
+  abrigo: abrigo
+  pantalon: pantalon_largo
+  vaquero: pantalon_largo
+  chino: pantalon_largo
+  jogger: pantalon_largo
+  bermuda: pantalon_corto

@@ -1,0 +1,56 @@
+split: val
+cuantiles:
+  clara: 0.99
+  posible: 0.9
+topk: 50
+experimento: experiments\conjunta
+seed: 42
+bandas:
+  estilo:
+    umbral_clara: 0.9726
+    umbral_posible: 0.9539
+    precision_clara: 0.1545
+    precision_posible: 0.1018
+    precision_todos: 0.0486
+    n_clara: 1463
+    n_posible: 13167
+  forma:
+    umbral_clara: 0.975
+    umbral_posible: 0.9574
+    precision_clara: 0.2843
+    precision_posible: 0.1665
+    precision_todos: 0.0814
+    n_clara: 890
+    n_posible: 8010
+  partes:
+    umbral_clara: 0.9697
+    umbral_posible: 0.953
+    precision_clara: 0.1975
+    precision_posible: 0.089
+    precision_todos: 0.0603
+    n_clara: 1129
+    n_posible: 10151
+  tejido:
+    umbral_clara: 0.9744
+    umbral_posible: 0.9573
+    precision_clara: 0.2877
+    precision_posible: 0.2038
+    precision_todos: 0.0897
+    n_clara: 1637
+    n_posible: 14728
+  textura:
+    umbral_clara: 0.9685
+    umbral_posible: 0.9525
+    precision_clara: 0.3249
+    precision_posible: 0.1524
+    precision_todos: 0.0892
+    n_clara: 988
+    n_posible: 8892
+  _agregado:
+    umbral_clara: 0.9728
+    umbral_posible: 0.9548
+    precision_clara: 0.2557
+    precision_posible: 0.1468
+    precision_todos: 0.0731
+    n_clara: 6106
+    n_posible: 54949

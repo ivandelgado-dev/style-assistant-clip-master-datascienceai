@@ -1,6 +1,9 @@
 # Datos — nunca se suben
 # DeepFashion supera los 20 GB; dos fuentes prohíben la redistribución
-data/
+# Se excluye el CONTENIDO, no el directorio: git no entra en un
+# directorio excluido, y entonces la negacion de abajo no se aplicaria.
+data/*
+!data/README.md
 
 # Python
 __pycache__/
@@ -21,3 +24,4 @@ models/
 
 # Sistema
 .DS_Store
+experiments/**/_obsoleto/

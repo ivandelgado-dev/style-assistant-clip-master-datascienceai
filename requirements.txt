@@ -1,0 +1,30 @@
+# Dependencias del core.
+#
+# torch y torchvision NO se instalan desde aqui: necesitan el indice de CUDA
+# 12.8, porque la GPU de trabajo es Blackwell (sm_120) y las ruedas con CUDA
+# anterior instalan sin error y luego fallan al ejecutar, o caen a CPU en
+# silencio. Instalalos aparte, ANTES que este fichero:
+#
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#
+# Comprobacion obligatoria antes de lanzar nada largo:
+#   python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
+#   -> tiene que decir 12.8 True
+#
+# Las versiones exactas se congelan con `pip freeze > requirements.lock.txt`
+# una vez el entorno funcione (contrato de reproducibilidad, entrega 3).
+
+numpy>=2.0
+pandas>=2.2
+pyarrow>=15.0
+PyYAML>=6.0
+
+# Paso 3 en adelante
+transformers>=5.0
+pillow>=10.0
+scikit-learn>=1.4
+matplotlib>=3.8
+
+# Demo funcional (app.py). Solo hace falta para lanzar la interfaz;
+# nada del pipeline de medicion depende de streamlit.
+streamlit>=1.40

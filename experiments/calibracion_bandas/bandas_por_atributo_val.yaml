@@ -1,0 +1,40 @@
+split: val
+cuantiles:
+  clara: 0.99
+  posible: 0.9
+topk: 50
+experimento: experiments\por_atributo
+seed: 42
+bandas:
+  forma:
+    umbral_clara: 0.9802
+    umbral_posible: 0.9676
+    precision_clara: 0.2573
+    precision_posible: 0.1605
+    precision_todos: 0.0874
+    n_clara: 890
+    n_posible: 8010
+  tejido:
+    umbral_clara: 0.9806
+    umbral_posible: 0.9676
+    precision_clara: 0.2862
+    precision_posible: 0.1964
+    precision_todos: 0.0882
+    n_clara: 1639
+    n_posible: 14726
+  textura:
+    umbral_clara: 0.9818
+    umbral_posible: 0.9699
+    precision_clara: 0.2794
+    precision_posible: 0.1889
+    precision_todos: 0.0969
+    n_clara: 988
+    n_posible: 8892
+  _agregado:
+    umbral_clara: 0.9808
+    umbral_posible: 0.9684
+    precision_clara: 0.2788
+    precision_posible: 0.1853
+    precision_todos: 0.0905
+    n_clara: 3515
+    n_posible: 31630

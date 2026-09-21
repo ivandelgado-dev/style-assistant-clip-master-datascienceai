@@ -1,0 +1,16 @@
+[theme]
+base = "light"
+
+# Misma paleta que el chatbot del modulo de IA Generativa, para que los dos
+# proyectos del master lean como un mismo producto.
+primaryColor = "#7B2D40"              # burdeos: solo lo interactivo
+backgroundColor = "#F7F3EC"           # beige neutro; el color lo pone la ropa
+secondaryBackgroundColor = "#EFEAE0"
+textColor = "#1C1B1A"
+
+# Sans-serif, como las tres referencias de e-commerce de moda medidas para el
+# sistema visual (ver docs/sistema_visual.md).
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
