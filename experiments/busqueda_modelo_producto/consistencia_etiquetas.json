@@ -1,0 +1,28 @@
+{
+  "modelo": "gemini-3.5-flash-lite",
+  "fotos": 24,
+  "acuerdo_por_campo": {
+    "posicion": "24/24",
+    "tipo": "22/24",
+    "manga": "24/24",
+    "largo": "24/24",
+    "color": "22/24",
+    "estampado": "18/24",
+    "tejido": "22/24"
+  },
+  "fotos_identicas": 14,
+  "diferencias": [
+    "abajo_07: tejido vaquero -> algodon",
+    "arriba_03: estampado estampado -> logo",
+    "arriba_04: estampado estampado -> logo",
+    "arriba_05: estampado estampado -> logo",
+    "arriba_06: color verde oscuro -> verde",
+    "arriba_06: estampado estampado -> logo",
+    "arriba_08: estampado estampado -> logo",
+    "encima_02: estampado estampado -> logo",
+    "encima_02: tejido cuero -> sintetico",
+    "encima_05: tipo sudadera -> chaqueta",
+    "encima_06: tipo sudadera -> chaqueta",
+    "encima_07: color verde oscuro -> verde"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "version_color": "c2",
+  "n_prendas": 118,
+  "misma_prenda": {
+    "50": 0.8,
+    "75": 2.44,
+    "90": 4.52,
+    "95": 7.82
+  },
+  "prendas_distintas": {
+    "5": 3.84,
+    "10": 5.92,
+    "25": 11.16,
+    "50": 18.12
+  },
+  "umbral_mismo_color": 4.52,
+  "umbral_color_cercano": 9.05,
+  "regla": "mismo = p90 de la misma prenda (toma A vs B); cercano = 2x",
+  "distintas_en_franja_mismo": 0.066,
+  "distintas_en_franja_cercano": 0.186
+}

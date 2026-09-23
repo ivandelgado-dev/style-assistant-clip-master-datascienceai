@@ -24,11 +24,10 @@ Limitaciones, declaradas a propósito
    cookie firmada, y Streamlit no expone cookies sin un componente externo.
 2. **No hay recuperación de contraseña**, ni verificación de correo, ni
    limitación de intentos. Los tres son trabajo de producto, no de evaluación.
-3. **Un usuario nuevo no tiene armario.** La digitalización de prendas no está
-   implementada en el MVP: solo existe el armario del autor, usado como
-   conjunto de test fuera de distribución. Un usuario recién registrado entra,
-   y la pantalla de búsqueda se lo dice y le ofrece explorar con ese armario
-   en modo demostración.
+3. **Un usuario nuevo empieza con el armario vacío** y sube sus prendas desde
+   Mi armario (`paginas/armario.py`). La primera cuenta registrada queda
+   marcada con `armario = 'propio'`: al entrar se le importan las 118 prendas
+   del autor, con los vectores ya calculados con los que se midió el trabajo.
 
 Por qué existe esto si la entrega 3 lo descartaba
 -------------------------------------------------
@@ -99,10 +98,10 @@ def registrar(bd: Path, correo: str, nombre: str, clave: str,
               armario: str | None = None) -> tuple[bool, str]:
     """Da de alta una cuenta.
 
-    `armario` asocia un armario digitalizado. En el MVP solo existe uno — el
-    del autor — así que la primera cuenta que se crea se lo queda y las
-    siguientes entran sin armario propio. No hay ninguna credencial escrita en
-    el código: la cuenta inicial se crea registrándose como cualquier otra.
+    `armario = 'propio'` marca la cuenta a la que se importa el armario del
+    autor (ver `nucleo.asegurar_importacion`). Solo la primera cuenta que se
+    crea la lleva; las demás empiezan vacías. No hay ninguna credencial escrita
+    en el código: la cuenta inicial se crea registrándose como cualquier otra.
     """
     cx = _conexion(bd)
     try:
@@ -150,3 +149,71 @@ def cuantos(bd: Path) -> int:
         return cx.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
     finally:
         cx.close()
+
+
+# ---------------------------------------------------------------------------
+# Cuenta
+# ---------------------------------------------------------------------------
+
+def datos(bd: Path, idu: int) -> dict | None:
+    """Datos visibles de una cuenta. Nunca devuelve la sal ni el hash."""
+    cx = _conexion(bd)
+    try:
+        fila = cx.execute(
+            "SELECT id, correo, nombre, armario, creado FROM usuarios"
+            " WHERE id = ?", (idu,)).fetchone()
+    finally:
+        cx.close()
+    if fila is None:
+        return None
+    return dict(zip(("id", "correo", "nombre", "armario", "creado"), fila))
+
+
+def actualizar_nombre(bd: Path, idu: int, nombre: str) -> tuple[bool, str]:
+    nombre = nombre.strip()
+    if not nombre:
+        return False, "El nombre no puede quedar vacío."
+    if len(nombre) > 80:
+        return False, "Ese nombre es demasiado largo."
+    cx = _conexion(bd)
+    try:
+        cx.execute("UPDATE usuarios SET nombre = ? WHERE id = ?", (nombre, idu))
+        cx.commit()
+    finally:
+        cx.close()
+    return True, "Nombre actualizado."
+
+
+def cambiar_clave(bd: Path, idu: int, actual: str, nueva: str,
+                  repetida: str) -> tuple[bool, str]:
+    """Cambia la contraseña exigiendo la actual.
+
+    Pedir la actual no es burocracia: sin ello, cualquiera que encontrara una
+    sesión abierta podría cambiar la contraseña y quedarse con la cuenta.
+
+    La contraseña nueva lleva una sal NUEVA. Reutilizar la anterior no rompe
+    nada hoy, pero es una mala costumbre: la sal está para que cada derivación
+    sea única, incluida la de la misma cuenta a lo largo del tiempo.
+    """
+    if len(nueva) < MIN_CLAVE:
+        return False, f"La nueva contraseña debe tener al menos {MIN_CLAVE} caracteres."
+    if nueva != repetida:
+        return False, "Las dos contraseñas nuevas no coinciden."
+    cx = _conexion(bd)
+    try:
+        fila = cx.execute("SELECT sal, clave FROM usuarios WHERE id = ?",
+                          (idu,)).fetchone()
+        if fila is None:
+            return False, "No se encuentra la cuenta."
+        sal, esperado = fila
+        if not hmac.compare_digest(_derivar(actual, sal), esperado):
+            return False, "La contraseña actual no es correcta."
+        if hmac.compare_digest(_derivar(nueva, sal), esperado):
+            return False, "La nueva contraseña es igual que la actual."
+        sal_nueva = os.urandom(_SAL)
+        cx.execute("UPDATE usuarios SET sal = ?, clave = ? WHERE id = ?",
+                   (sal_nueva, _derivar(nueva, sal_nueva), idu))
+        cx.commit()
+    finally:
+        cx.close()
+    return True, "Contraseña cambiada."

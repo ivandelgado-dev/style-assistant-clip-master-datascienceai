@@ -1,0 +1,68 @@
+{
+  "n_parejas": 24,
+  "n_galeria_total": 142,
+  "armario_como_distractor": true,
+  "gemini": "gemini-3.5-flash-lite",
+  "azar_acierto@1": 0.031,
+  "umbrales_color": {
+    "mismo": 4.52,
+    "cercano": 9.05
+  },
+  "metodos": {
+    "clip_plano": {
+      "acierto@1": 0.667,
+      "acierto@3": 0.75,
+      "mrr": 0.766,
+      "n@1": 16,
+      "n@3": 18
+    },
+    "actual": {
+      "acierto@1": 0.708,
+      "acierto@3": 0.917,
+      "mrr": 0.817,
+      "n@1": 17,
+      "n@3": 22
+    },
+    "color_primero": {
+      "acierto@1": 0.708,
+      "acierto@3": 0.958,
+      "mrr": 0.837,
+      "n@1": 17,
+      "n@3": 23
+    },
+    "etiquetas": {
+      "acierto@1": 0.792,
+      "acierto@3": 0.875,
+      "mrr": 0.85,
+      "n@1": 19,
+      "n@3": 21
+    }
+  },
+  "frente_a_actual": {
+    "color_primero": {
+      "mejora": 6,
+      "empeora": 5,
+      "igual": 13,
+      "p_signos": 1.0
+    },
+    "etiquetas": {
+      "mejora": 6,
+      "empeora": 3,
+      "igual": 15,
+      "p_signos": 0.508
+    }
+  },
+  "decision": {
+    "entran": [],
+    "ganador": "actual"
+  },
+  "gemini_consultas": {
+    "persona_detectada": 24,
+    "pieza_de_su_posicion_encontrada": 24
+  },
+  "fiabilidad_etiquetas_armario": {
+    "tipo_igual_categoria_autor": "105/118",
+    "manga_igual_descripcion_autor": "25/27",
+    "prenda_suelta_bien_detectada": "118/118"
+  }
+}

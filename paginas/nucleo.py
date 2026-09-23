@@ -22,7 +22,8 @@ from PIL import Image
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 
-FOTOS = RAIZ / "data/raw/wardrobe/img"
+DATOS = RAIZ / "data"
+FOTOS = DATOS / "raw/wardrobe/img"
 EMB = RAIZ / "data/embeddings_armario"
 PARES = RAIZ / "data/raw/wardrobe/pares.csv"
 ETIQUETAS = RAIZ / "data/raw/wardrobe/armario.csv"
@@ -39,8 +40,11 @@ DIMENSIONES = {
 # Cifras de la portada. Ninguna se escribe a mano aquí sin estar medida y
 # trazable al documento que la respalda.
 CIFRAS = [
-    ("+0,022", "NDCG@10 de la proyección supervisada sobre CLIP plano, en "
-               "atributos vistos. Significativo por bootstrap.",
+    # OJO: el mismo redondeo que en la página de Resultados. Antes la portada
+    # decía +0,022 y Resultados +0,0217. Es el mismo número, y verlo escrito
+    # de dos formas se lee como descuido, no como estilo.
+    ("+0,0217", "NDCG@10 de la proyección supervisada sobre CLIP plano, en "
+                "atributos vistos. Significativo por bootstrap.",
      "resultados_modelado.md"),
     ("26 / 100", "Aciertos en la banda de mayor proximidad, frente a 7 de cada "
                  "100 sin ordenar. En atributos no vistos, 24.",
@@ -48,6 +52,8 @@ CIFRAS = [
     ("1,000", "AUC separando fotografía de catálogo de fotografía de móvil. "
               "El nulo por composición está en 0,57–0,64.",
      "resultados_domain_gap.md"),
+    # No es un resultado, es el tamaño del conjunto. Va en la banda porque
+    # da la escala con la que leer los otros tres.
     ("118", "Prendas propias fotografiadas, dos tomas cada una, como test "
             "fuera de distribución. No se usaron para entrenar.",
      "protocolo_armario.md"),
@@ -172,24 +178,24 @@ def muestra_catalogo(n: int = 6000, semilla: int = 7):
 
 
 @st.cache_data(show_spinner=False)
-def nube_para_cupula(con_armario: bool, n_malla: int = 1400):
+def nube_para_cupula(V: np.ndarray | None, n_malla: int = 1400):
     """Retículo del héroe y qué posiciones se rellenan.
 
     El retículo es uniforme por construcción (Fibonacci) y siempre el mismo.
     Lo que cambia al iniciar sesión es cuántas posiciones se rellenan y
-    cuáles: cada prenda toma la posición más próxima a su vector real
-    proyectado, así que el patrón de relleno es dato, no adorno.
+    cuáles: cada prenda DEL USUARIO que ha entrado toma la posición más
+    próxima a su vector real proyectado, así que el patrón de relleno es
+    dato, no adorno. Sin sesión, o con el armario vacío, no se rellena nada.
+
+    La caché va por el contenido de `V`: al añadir o quitar una prenda cambia
+    la matriz y la cúpula se recalcula sola.
     """
     from paginas.cupula import (asignar, orientar, proyectar_a_esfera,
                                 reticulo)
     malla = reticulo(n_malla)
-    if not con_armario:
+    if V is None or len(V) == 0:
         return malla.tolist(), [], 0.0
-    V, arm = cargar_armario()
-    if V is None:
-        return malla.tolist(), [], 0.0
-    P, explicada = proyectar_a_esfera(V[arm["pos"].to_numpy()],
-                                      referencia=muestra_catalogo())
+    P, explicada = proyectar_a_esfera(V, referencia=muestra_catalogo())
     # Sin esto, el armario cae en la mitad de la esfera que la cúpula no
     # muestra y no se rellena ni una posición. Ver `orientar`.
     return malla.tolist(), asignar(malla, orientar(P)), explicada
@@ -227,20 +233,44 @@ def encajar(im: Image.Image, obj: float = 3 / 2) -> Image.Image:
     return lienzo
 
 
-@st.cache_data(show_spinner=False, max_entries=512)
-def dato_uri(rel: str, ancho: int = 560) -> str:
+@st.cache_data(show_spinner=False, max_entries=1024)
+def dato_uri(rel: str, ancho: int = 560, rellenar: bool = True) -> str:
+    """Foto incrustada en base64. `rel` es relativa a `data/`.
+
+    Relativa a `data/` y no a la carpeta del armario del autor porque ahora
+    hay dos sitios: las fotos importadas siguen en `raw/wardrobe/img/` y las
+    subidas van a `usuarios/<id>/`. La fila de la base guarda cuál.
+
+    `draft` le pide al decodificador JPEG que lea la foto ya reducida (1/2,
+    1/4 o 1/8). Una foto de móvil de 12 Mpx pasa de ~100 ms a ~15 ms, que es
+    lo que hace que un armario de cien prendas se pinte sin esperar.
+    """
     try:
-        im = encajar(Image.open(FOTOS / rel).convert("RGB"))
+        im = Image.open(DATOS / rel)
+        im.draft("RGB", (ancho * 2, ancho * 2))
+        im = im.convert("RGB")
     except Exception:
         return ""
-    if im.width > ancho:
-        im = im.resize((ancho, int(im.height * ancho / im.width)), Image.LANCZOS)
+    if rellenar:
+        im = encajar(im)
+        if im.width > ancho:
+            im = im.resize((ancho, int(im.height * ancho / im.width)),
+                           Image.LANCZOS)
+    else:
+        # Sin relleno: cabe en un cuadrado de `ancho` de lado y el marco
+        # la centra con object-fit:contain. Un pantalón vertical ya no se
+        # queda diminuto dentro de un marco apaisado.
+        im.thumbnail((ancho, ancho), Image.LANCZOS)
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=82, optimize=True)
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def ficha(r, puesto: int, s: float, ancho_barra: float, segundas: dict) -> str:
+def ficha(r, puesto: int, s: float, ancho_barra: float, segundas: dict,
+          ver_sim: bool = True) -> str:
+    # ver_sim=False oculta la cifra exacta. En este armario todo cae en un
+    # margen minúsculo (se midió), y tres decimales en la vista principal
+    # aparentan una precisión que no hay. Queda en el modo evaluación.
     a = dato_uri(r["fichero"])
     rel_b = segundas.get(str(r.get("prenda_id", "")), "")
     b = dato_uri(rel_b) if rel_b else a
@@ -251,7 +281,8 @@ def ficha(r, puesto: int, s: float, ancho_barra: float, segundas: dict) -> str:
     if not a:
         return ('<div class="ficha"><div class="marco"></div>'
                 '<p class="sub">foto ilegible</p></div>')
-    return f"""
+    # Sin líneas en blanco ni sangría: ver `busqueda.compactar`.
+    return "".join(linea.strip() for linea in f"""
     <div class="ficha">
       <div class="marco">
         <span class="puesto">{puesto:02d}</span>
@@ -259,11 +290,11 @@ def ficha(r, puesto: int, s: float, ancho_barra: float, segundas: dict) -> str:
       </div>
       <div class="pie">
         <p class="nom">{_html.escape(nombre)}</p>
-        <p class="sub">{_html.escape(pid)} · {s:.3f}</p>
-        <div class="pista"><div class="barra" style="width:{ancho_barra:.0f}%"></div></div>
+        <p class="sub">{_html.escape(pid)}{f' · {s:.3f}' if ver_sim else ''}</p>
+        <div class="medidor"><div class="barra" style="width:{ancho_barra:.0f}%"></div></div>
         <p class="desc">{_html.escape(desc)}</p>
       </div>
-    </div>"""
+    </div>""".splitlines())
 
 
 def rejilla(indices, arm, sim, segundas, densa: bool = False) -> str:
@@ -282,6 +313,106 @@ def rejilla(indices, arm, sim, segundas, densa: bool = False) -> str:
 
 def usuario():
     return st.session_state.get("usuario")
+
+
+def detalle_texto(f: dict) -> str:
+    """Talla · color · corte · tejido · notas, lo que haya."""
+    return " · ".join(str(f[k]).strip() for k in
+                      ("talla", "color", "corte", "tejido", "notas")
+                      if f.get(k) and str(f[k]).strip())
+
+
+def armario_usuario(usuario_id: int):
+    """(vectores, tabla) del armario de un usuario, en el mismo orden.
+
+    La tabla lleva las columnas que esperan `ficha` y `busqueda.html_pieza`
+    (`fichero`, `prenda_id`, `categoria`, `descripcion_libre`), así que la
+    búsqueda no distingue una prenda importada de una subida.
+
+    Sin caché a propósito: son unos cientos de filas de SQLite, milisegundos,
+    y así una prenda recién añadida aparece sin tener que invalidar nada.
+    """
+    from paginas import armario
+    armario.rellenar_colores(BD_USUARIOS, DATOS, usuario_id)
+    rellenar_etiquetas_desde_cache(usuario_id)
+    V, filas = armario.listar(BD_USUARIOS, usuario_id)
+    d = pd.DataFrame(filas, columns=[
+        "id", "categoria", "posicion", "foto", "foto_b", "talla", "color",
+        "corte", "tejido", "notas", "origen", "ref", "creado", "color_l",
+        "color_a", "color_b", "etiquetas"])
+    d["fichero"] = d["foto"]
+    d["fichero_b"] = d["foto_b"].fillna("")
+    d["prenda_id"] = [r if r else f"#{i}" for r, i in zip(d["ref"], d["id"])]
+    d["descripcion_libre"] = [detalle_texto(f) for f in filas]
+    return V, d
+
+
+_INTENTADAS: set = set()
+
+
+def rellenar_etiquetas_desde_cache(usuario_id: int) -> int:
+    """Pone etiquetas a las prendas que ya se etiquetaron antes (misma foto).
+    Sin llamar a la API: solo mira la caché. Devuelve cuántas ha puesto."""
+    from paginas import armario, etiquetas
+    # Leer cada foto para sacar su huella es caro (MB por foto). Solo se
+    # intenta si la caché ha cambiado desde la última vez para este usuario.
+    try:
+        marca = (usuario_id, etiquetas.CACHE.stat().st_mtime)
+    except OSError:
+        return 0
+    if marca in _INTENTADAS:
+        return 0
+    _INTENTADAS.add(marca)
+    n = 0
+    for pid, foto in armario.sin_etiquetas(BD_USUARIOS, usuario_id):
+        try:
+            e = etiquetas.desde_cache((DATOS / foto).read_bytes())
+        except OSError:
+            continue
+        if e and e.get("piezas"):
+            armario.guardar_etiquetas(BD_USUARIOS, usuario_id, pid, e["piezas"][0])
+            n += 1
+    return n
+
+
+def segundas_de(d: pd.DataFrame) -> dict:
+    """prenda_id -> foto de la segunda toma, para el cambio al pasar el cursor."""
+    return {p: b for p, b in zip(d["prenda_id"], d["fichero_b"]) if b}
+
+
+def asegurar_importacion(u: dict) -> int:
+    """Lleva el armario del autor a su cuenta la primera vez. Idempotente.
+
+    Solo lo hace la cuenta marcada con `armario = 'propio'` (la primera que se
+    registró, ver `auth.registrar`). Usa los vectores ya calculados por
+    `src/embeddings_clip.py`: los mismos con los que se midió el trabajo.
+    """
+    if not u or u.get("armario") != "propio":
+        return 0
+    from paginas import armario
+    from paginas.busqueda import posicion_de
+    V, arm = cargar_armario()
+    if V is None:
+        return 0
+    segundas = cargar_segundas_tomas()
+    filas = []
+    for _, r in arm.iterrows():
+        b = segundas.get(str(r.get("prenda_id", "")), "")
+        filas.append({
+            "ref": str(r.get("prenda_id", "") or "") or None,
+            "foto": "raw/wardrobe/img/" + r["fichero"],
+            "foto_b": ("raw/wardrobe/img/" + b) if b else None,
+            "categoria": r.get("categoria", ""),
+            "color": r.get("color_base", ""),
+            "corte": r.get("corte", ""),
+            "tejido": r.get("tejido", ""),
+            # La descripción libre del protocolo («camisa manga corta»,
+            # «sudadera sin capucha») es justo lo que distingue dos prendas
+            # de la misma categoría. Va a notas.
+            "notas": r.get("descripcion_libre", ""),
+        })
+    return armario.importar(BD_USUARIOS, u["id"], V[arm["pos"].to_numpy()],
+                            filas, posicion_de)
 
 
 def exige_sesion(destino) -> bool:

@@ -9,7 +9,9 @@ vive en `paginas/`:
     paginas/nucleo.py   rutas, carga de datos, proyección y rejilla
     paginas/cupula.py   el héroe de la portada: los embeddings reales
     paginas/auth.py     registro y acceso (scrypt + SQLite)
-    paginas/vistas.py   las siete pantallas
+    paginas/armario.py  las prendas de cada usuario (SQLite)
+    paginas/vistas.py   las pantallas informativas, acceso y búsqueda
+    paginas/pantalla_armario.py   Mi armario: ver, añadir y quitar prendas
 
 Por qué la navegación se dibuja a mano
 --------------------------------------
@@ -29,7 +31,6 @@ como una petición de parada y se apaga solo.
 
 from __future__ import annotations
 
-import html as _html
 import pathlib
 
 import streamlit as st
@@ -39,7 +40,9 @@ st.set_page_config(page_title="Akin", layout="wide",
                    page_icon=str(_ICONO) if _ICONO.exists() else None,
                    initial_sidebar_state="collapsed")
 
-from paginas import vistas                      # noqa: E402
+import streamlit.components.v1 as componentes  # noqa: E402
+from paginas import pantalla_armario, vistas    # noqa: E402
+from paginas.entrada import GUION               # noqa: E402
 from paginas.estilo import CSS                  # noqa: E402
 from paginas.nucleo import usuario              # noqa: E402
 
@@ -68,40 +71,50 @@ P_FUTURO = st.Page(vistas.futuro, title="Futuro", url_path="futuro")
 P_SOBRE = st.Page(vistas.sobre, title="El proyecto", url_path="proyecto")
 P_ACCESO = st.Page(vistas.acceso, title="Acceso", url_path="acceso")
 P_BUSCAR = st.Page(vistas.buscar, title="Buscar", url_path="buscar")
+P_ARMARIO = st.Page(pantalla_armario.mi_armario, title="Mi armario",
+                    url_path="armario")
 
 # Las vistas necesitan las páginas para `st.switch_page`, y las páginas
 # necesitan las funciones de las vistas. Se rompe el ciclo inyectándolas aquí.
 vistas.PAGINAS.update({"inicio": P_INICIO, "sistema": P_SISTEMA,
                        "resultados": P_RESULT, "futuro": P_FUTURO,
                        "proyecto": P_SOBRE, "acceso": P_ACCESO,
-                       "buscar": P_BUSCAR})
+                       "buscar": P_BUSCAR, "armario": P_ARMARIO})
 
 pg = st.navigation([P_INICIO, P_SISTEMA, P_RESULT, P_FUTURO, P_SOBRE,
-                    P_ACCESO, P_BUSCAR], position="hidden")
+                    P_ACCESO, P_BUSCAR, P_ARMARIO], position="hidden")
 
 # ---- barra superior -------------------------------------------------------
-marca, nav, acc = st.columns([1.4, 5.0, 1.4], vertical_alignment="center")
+# Dos grupos, como en las tiendas de referencia: en el centro, las páginas que
+# explican el proyecto; a la derecha, lo que es TUYO (buscar, tu armario, tu
+# cuenta). Las dos de la aplicación solo aparecen con sesión iniciada: sin
+# cuenta no hay armario en el que buscar.
+u = usuario()
+marca, nav, acc = st.columns([1.3, 4.3, 2.4], vertical_alignment="center")
 with marca:
     st.markdown(f'<div class="marca">{logotipo()}</div>',
                 unsafe_allow_html=True)
 with nav:
-    # Seis columnas IGUALES. Antes la ultima era 1.6 y empujaba los enlaces
-    # hacia la izquierda, dejando un hueco muerto antes del boton.
-    cols = st.columns(6)
+    cols = st.columns(5)
     for col, pagina in zip(cols, [P_INICIO, P_SISTEMA, P_RESULT, P_FUTURO,
-                                  P_SOBRE, P_BUSCAR]):
+                                  P_SOBRE]):
         with col:
             st.page_link(pagina, label=pagina.title)
 with acc:
-    u = usuario()
+    # Icono de persona, como en las tres tiendas de referencia. `st.page_link`
+    # acepta iconos de Material Symbols con la sintaxis :material/<nombre>:.
     if u:
-        st.markdown(f'<div class="rot" style="text-align:right;">'
-                    f'{_html.escape(u["nombre"])}</div>',
-                    unsafe_allow_html=True)
+        c_bus, c_arm, c_cta = st.columns([1, 1.25, 1.05])
+        with c_bus:
+            st.page_link(P_BUSCAR, label="Buscar")
+        with c_arm:
+            st.page_link(P_ARMARIO, label="Mi armario")
     else:
-        if st.button("Iniciar sesión", type="primary",
-                     use_container_width=True):
-            st.switch_page(P_ACCESO)
+        _, c_cta = st.columns([2.3, 1.05])
+    with c_cta:
+        st.page_link(P_ACCESO,
+                     label=u["nombre"].split()[0] if u else "Acceder",
+                     icon=":material/person:")
 
 st.markdown('<div class="regla-fuerte"></div>', unsafe_allow_html=True)
 
@@ -124,3 +137,8 @@ st.markdown(
     f'</style>', unsafe_allow_html=True)
 
 pg.run()
+
+# La entrada de los elementos al aparecer en pantalla. Va al final, cuando el
+# contenido de la pagina ya esta en el DOM. Ver paginas/entrada.py: si el
+# iframe no alcanza al documento padre, no pasa nada y la pagina se ve entera.
+componentes.html(GUION, height=0)

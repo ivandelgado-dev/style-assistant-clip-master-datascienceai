@@ -1,0 +1,66 @@
+{
+  "n_parejas": 24,
+  "n_galeria_total": 24,
+  "armario_como_distractor": false,
+  "gemini": "gemini-3.5-flash-lite",
+  "azar_acierto@1": 0.125,
+  "umbrales_color": {
+    "mismo": 4.52,
+    "cercano": 9.05
+  },
+  "metodos": {
+    "clip_plano": {
+      "acierto@1": 0.708,
+      "acierto@3": 0.875,
+      "mrr": 0.809,
+      "n@1": 17,
+      "n@3": 21
+    },
+    "actual": {
+      "acierto@1": 0.708,
+      "acierto@3": 0.917,
+      "mrr": 0.823,
+      "n@1": 17,
+      "n@3": 22
+    },
+    "color_primero": {
+      "acierto@1": 0.792,
+      "acierto@3": 1.0,
+      "mrr": 0.896,
+      "n@1": 19,
+      "n@3": 24
+    },
+    "etiquetas": {
+      "acierto@1": 0.875,
+      "acierto@3": 0.958,
+      "mrr": 0.918,
+      "n@1": 21,
+      "n@3": 23
+    }
+  },
+  "frente_a_actual": {
+    "color_primero": {
+      "mejora": 7,
+      "empeora": 4,
+      "igual": 13,
+      "p_signos": 0.549
+    },
+    "etiquetas": {
+      "mejora": 6,
+      "empeora": 1,
+      "igual": 17,
+      "p_signos": 0.125
+    }
+  },
+  "decision": {
+    "entran": [
+      "color_primero",
+      "etiquetas"
+    ],
+    "ganador": "etiquetas"
+  },
+  "gemini_consultas": {
+    "persona_detectada": 24,
+    "pieza_de_su_posicion_encontrada": 24
+  }
+}
