@@ -75,7 +75,57 @@ CABEZA = RAIZ / "experiments/conjunta/cabeza_conjunta.pt"
 CALIB = RAIZ / "experiments/color_primero/calibracion.json"
 SALIDA = RAIZ / "experiments/busqueda_modelo_producto"
 POSICIONES = ("arriba", "encima", "abajo")
-METODOS = ("clip_plano", "actual", "color_primero", "etiquetas")
+METODOS = ("clip_plano", "actual", "color_primero", "etiquetas", "estructura",
+           "prioridades", "prioridades_ia")
+# «estructura» se añadió DESPUÉS de ver los resultados de los otros cuatro:
+# es un análisis a posteriori, no confirmatorio, y se reporta así. Sale de
+# hechos medidos antes de decidirlo: el orden por etiquetas fallaba por el
+# color leído con otra luz, y tipo, manga y largo fueron los campos estables
+# y fiables. Reproduce lo que hace la aplicación con ORDEN_ESTRUCTURA:
+#   - candidatos: los de la posición + los del mismo tipo en otra posición
+#   - penalización solo de tipo, manga y largo (etiquetas.penalizacion_estructura)
+#   - si la IA ve algo abierto encima, lo de arriba se busca en la franja
+#     central (busqueda.caja_interior)
+# Su galería puede ser mayor que la de los demás métodos (n_galeria_estructura).
+#
+# «prioridades» (segunda ronda a posteriori, 24/09). Motivo: con la
+# aplicación en uso, el autor vio la prenda exacta de la foto salir segunda
+# por detrás de otra de distinto color, y los datos de la primera ronda lo
+# confirman (arriba_02: puesto 29 con «actual», 1 con CLIP plano y con el
+# color primero). La proyección conjunta se entrenó con atributos de
+# DeepFashion, casi sin colores: ordena por forma y el color le es ajeno.
+# Implementa el orden que el autor pidió (color, luego tela, luego corte) con
+# la estructura delante; claves, de más a menos importante:
+#   1. estructura dura: familia de tipo, manga, largo (etiquetas.niveles_prioridad)
+#   2. franja de color por píxeles (la de color_primero)
+#   3. estructura blanda: otro tipo del mismo grupo (vaquero / pantalón)
+#   4. parecido en la proyección conjunta
+# Misma galería, recorte y candidatos que «estructura».
+# REGLA, escrita antes de medirlo: entra (sustituye a «estructura» en la
+# aplicación) si en la galería real (--armario) no empeora ni el acierto@1
+# ni el @3 de «estructura». Se reporta también la galería limpia y el
+# recuento consulta a consulta frente a «estructura».
+# RESULTADO: no entra (real 16/23 frente a 17/22; limpia 20/24 frente a 17/22).
+#
+# TERCERA RONDA — «prioridades_ia», confirmatoria, con parejas NUEVAS.
+# Protocolo escrito el 24/09, ANTES de recoger las parejas:
+#   Qué cambia: la clave 2 (color) sale de las etiquetas de la IA
+#   (etiquetas.franja_color: 0 mismo color, 1 misma familia, 2 otro) y no de
+#   los píxeles. Motivo, visto en la segunda ronda: el color de la IA cae en
+#   la misma familia en modelo y producto en 19 de 24 parejas; la franja por
+#   píxeles es 0 o 1 solo en 15 de 24. Como eso se vio en las mismas 24
+#   parejas, se prueba en otras.
+#   Datos: data/eval_color2, mismo formato. Productos seguidos del listado de
+#   hombre de la tienda, en su orden, saltando solo los que no tengan una
+#   foto de modelo en la que se vea la prenda y los que ya estén en
+#   data/eval_color. Objetivo: 6 arriba, 6 abajo, 4 encima o más.
+#   Galería: los productos nuevos + los 24 de la primera prueba como
+#   distractores (--distractores) + las 118 del autor (--armario).
+#   Regla: entra si en esa galería no empeora ni el acierto@1 ni el @3 de
+#   «estructura». «prioridades» (píxeles) se mide también, solo como réplica:
+#   ya no puede entrar.
+#   Resultados en experiments/busqueda_ronda3 (--salida), aparte de los de
+#   las dos primeras rondas.
 
 
 def _de_busqueda(nombre: str):
@@ -113,6 +163,9 @@ def main() -> int:
     ap.add_argument("--armario", action="store_true",
                     help="añadir las 118 prendas del autor como distractores")
     ap.add_argument("--sin-gemini", action="store_true")
+    ap.add_argument("--distractores", type=pathlib.Path, nargs="*", default=[],
+                    help="carpetas con producto/ que entran solo como distractores")
+    ap.add_argument("--salida", type=pathlib.Path, default=SALIDA)
     ap.add_argument("--lote", type=int, default=10,
                     help="fotos por petición a Gemini (la cuota cuenta peticiones)")
     args = ap.parse_args()
@@ -176,13 +229,14 @@ def main() -> int:
 
     # ---------------- etiquetado por lotes (pocas peticiones)
     rutas_armario = []
+    extra = [f for d in args.distractores for f in sorted((d / "producto").glob("*.*"))]
     if args.armario:
         pa = pd.read_csv(RAIZ / "data/raw/wardrobe/pares.csv", encoding="utf-8-sig", dtype=str)
         rutas_armario = [RAIZ / "data/raw/wardrobe/img" / f.replace("\\", "/")
                          for f in pa[pa["toma"] == "a"]["fichero"]]
     if usar_gemini:
         todas = ([prod[c] for c in sorted(prod)] + [mod[c] for c in claves]
-                 + rutas_armario)
+                 + rutas_armario + extra)
         print(f"Etiquetando con Gemini ({len(todas)} fotos, {args.lote} por petición)…")
         etiquetas.analizar_lote([r.read_bytes() for r in todas], modelo_vlm, args.lote)
         falta = sum(etiquetas.en_cache(r.read_bytes(), modelo_vlm) is None for r in todas)
@@ -200,6 +254,16 @@ def main() -> int:
         e = etiquetar(prod[c])
         gal.append({"id": c, "pos": c.split("_")[0], "tienda": True,
                     "lab": color.color_prenda(Image.open(prod[c]))[0],
+                    "etq": e["piezas"][0] if e and e["piezas"] else None,
+                    "v_c": proyectar(v)[0], "v_p": plano(v)[0]})
+    for f in extra:
+        pos_f = f.stem.split("_")[0]
+        if pos_f not in POSICIONES:
+            continue
+        v = vec(Image.open(f))
+        e = etiquetar(f)
+        gal.append({"id": f"{f.parent.parent.name}/{f.stem}", "pos": pos_f, "tienda": False,
+                    "lab": color.color_prenda(Image.open(f))[0],
                     "etq": e["piezas"][0] if e and e["piezas"] else None,
                     "v_c": proyectar(v)[0], "v_p": plano(v)[0]})
     fiab = []
@@ -253,6 +317,29 @@ def main() -> int:
         de = color.delta_cmc(lab_q, np.array([g["lab"] for g in G]))
         franja = np.where(de <= t1, 0, np.where(de <= t2, 1, 2))
         pen = np.array([etiquetas.penalizacion(pz_q, g["etq"]) for g in G])
+        # --- «estructura», como la aplicación
+        encima_q = bool(e_q) and any(q["posicion"] == "encima" for q in e_q["piezas"])
+        if pos == "arriba" and encima_q:
+            v_e = proyectar(vec(recortar(im, _de_busqueda("caja_interior")(0.52))))[0]
+        else:
+            v_e = q_c
+        GE = [g for g in gal if g["pos"] == pos or etiquetas.compatibles(pz_q, g["etq"])]
+        s_e = np.array([g["v_c"] @ v_e for g in GE])
+        est = np.array([etiquetas.penalizacion_estructura(pz_q, g["etq"]) for g in GE])
+        orden_e = np.lexsort((-s_e, est))
+        # --- «prioridades»: mismo recorte para el vector y para el color
+        if pos == "arriba" and encima_q:
+            lab_e = color.color_persona(recortar(im, _de_busqueda("caja_interior")(0.52)), pos)[0]
+        else:
+            lab_e = lab_q
+        de_e = color.delta_cmc(lab_e, np.array([g["lab"] for g in GE]))
+        franja_e = np.where(de_e <= t1, 0, np.where(de_e <= t2, 1, 2))
+        niv = np.array([etiquetas.niveles_prioridad(pz_q, g["etq"]) for g in GE],
+                       dtype=int).reshape(-1, 2)
+        orden_p = np.lexsort((-s_e, niv[:, 1], franja_e, niv[:, 0]))
+        franja_ia = np.array([etiquetas.franja_color(pz_q, g["etq"]) for g in GE])
+        orden_pi = np.lexsort((-s_e, niv[:, 1], franja_ia, niv[:, 0]))
+        obj_e = next(k for k, g in enumerate(GE) if g["id"] == c and g["tienda"])
         orden = {
             "clip_plano": np.argsort(-s_p, kind="stable"),
             "actual": np.argsort(-s_c, kind="stable"),
@@ -273,6 +360,10 @@ def main() -> int:
                 "pen_objetivo": float(pen[obj])}
         for m, o in orden.items():
             fila[f"rango_{m}"] = int(np.where(o == obj)[0][0]) + 1
+        fila["rango_estructura"] = int(np.where(orden_e == obj_e)[0][0]) + 1
+        fila["rango_prioridades"] = int(np.where(orden_p == obj_e)[0][0]) + 1
+        fila["rango_prioridades_ia"] = int(np.where(orden_pi == obj_e)[0][0]) + 1
+        fila["n_galeria_estructura"] = len(GE)
         filas.append(fila)
 
     d = pd.DataFrame(filas)
@@ -284,15 +375,31 @@ def main() -> int:
                   "mrr": round(float((1 / r).mean()), 3),
                   "n@1": int((r == 1).sum()), "n@3": int((r <= 3).sum())}
     frente = {}
-    for m in ("color_primero", "etiquetas"):
+    for m in ("color_primero", "etiquetas", "estructura"):
         mejor = int((d[f"rango_{m}"] < d["rango_actual"]).sum())
         peor = int((d[f"rango_{m}"] > d["rango_actual"]).sum())
         frente[m] = {"mejora": mejor, "empeora": peor, "igual": len(d) - mejor - peor,
                      "p_signos": round(signos(mejor, peor), 3)}
 
+    mejor = int((d["rango_prioridades"] < d["rango_estructura"]).sum())
+    peor = int((d["rango_prioridades"] > d["rango_estructura"]).sum())
+    frente["prioridades_frente_a_estructura"] = {
+        "mejora": mejor, "empeora": peor, "igual": len(d) - mejor - peor,
+        "p_signos": round(signos(mejor, peor), 3)}
+    mp, me = met["prioridades"], met["estructura"]
+    prioridades_entra = (usar_gemini and mp["n@1"] >= me["n@1"]
+                         and mp["n@3"] >= me["n@3"])
+    mejor = int((d["rango_prioridades_ia"] < d["rango_estructura"]).sum())
+    peor = int((d["rango_prioridades_ia"] > d["rango_estructura"]).sum())
+    frente["prioridades_ia_frente_a_estructura"] = {
+        "mejora": mejor, "empeora": peor, "igual": len(d) - mejor - peor,
+        "p_signos": round(signos(mejor, peor), 3)}
+    mi = met["prioridades_ia"]
+    ia_entra = usar_gemini and mi["n@1"] >= me["n@1"] and mi["n@3"] >= me["n@3"]
+
     a = met["actual"]
-    entran = [m for m in ("color_primero", "etiquetas")
-              if (m != "etiquetas" or usar_gemini)
+    entran = [m for m in ("color_primero", "etiquetas", "estructura")
+              if (m not in ("etiquetas", "estructura") or usar_gemini)
               and met[m]["n@1"] > a["n@1"] and met[m]["n@3"] >= a["n@3"]]
     ganador = (max(entran, key=lambda m: (met[m]["n@1"], met[m]["n@3"], met[m]["mrr"]))
                if entran else "actual")
@@ -303,7 +410,12 @@ def main() -> int:
         "azar_acierto@1": round(float((1 / d["n_galeria"]).mean()), 3),
         "umbrales_color": {"mismo": t1, "cercano": t2},
         "metodos": met, "frente_a_actual": frente,
-        "decision": {"entran": entran, "ganador": ganador},
+        "decision": {"entran": entran, "ganador": ganador,
+                     "nota": "estructura es a posteriori (ver METODOS)",
+                     "prioridades_no_empeora_a_estructura": bool(prioridades_entra),
+                     "prioridades_ia_no_empeora_a_estructura": bool(ia_entra),
+                     "nota_prioridades": "segunda ronda a posteriori; la regla que "
+                                         "cuenta es la de la galería real (--armario)"},
     }
     if usar_gemini:
         res["gemini_consultas"] = {
@@ -319,25 +431,35 @@ def main() -> int:
             "prenda_suelta_bien_detectada": f"{int((f.persona_gemini == False).sum())}/{len(f)}",  # noqa: E712
         }
 
-    SALIDA.mkdir(parents=True, exist_ok=True)
+    salida = args.salida
+    salida.mkdir(parents=True, exist_ok=True)
     suf = "_armario" if args.armario else ""
-    (SALIDA / f"metricas{suf}.json").write_text(
+    (salida / f"metricas{suf}.json").write_text(
         json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
-    d.to_csv(SALIDA / f"por_consulta{suf}.csv", index=False)
+    d.to_csv(salida / f"por_consulta{suf}.csv", index=False)
     if fiab:
-        pd.DataFrame(fiab).to_csv(SALIDA / "etiquetas_armario.csv", index=False)
-    (SALIDA / "config.yaml").write_text(
+        pd.DataFrame(fiab).to_csv(salida / "etiquetas_armario.csv", index=False)
+    (salida / "config.yaml").write_text(
         f"clip: {MODELO}\ncabeza: experiments/conjunta/cabeza_conjunta.pt\n"
         f"cintura: 0.52\nversion_color: {color.VERSION}\n"
         f"umbral_mismo: {t1}\numbral_cercano: {t2}\ndistancia_color: CMC(2:1)\n"
         f"gemini: {modelo_vlm if usar_gemini else 'no'}\n"
         f"version_etiquetas: {etiquetas.VERSION}\n"
+        f"carpeta: {args.carpeta.name}\n"
+        f"distractores: {[d.name for d in args.distractores]}\n"
         f"torch: {torch.__version__}\ndispositivo: {disp}\n", encoding="utf-8")
 
     pd.set_option("display.width", 200)
     print(d.to_string(index=False))
     print()
     print(json.dumps(res, indent=2, ensure_ascii=False))
+    print()
+    print(f"prioridades frente a estructura ({'galería real' if args.armario else 'galería limpia'}): "
+          f"@1 {mp['n@1']} vs {me['n@1']}, @3 {mp['n@3']} vs {me['n@3']} -> "
+          + ("NO EMPEORA" if prioridades_entra else "EMPEORA"))
+    print(f"prioridades_ia frente a estructura: @1 {mi['n@1']} vs {me['n@1']}, "
+          f"@3 {mi['n@3']} vs {me['n@3']} -> " + ("NO EMPEORA" if ia_entra else "EMPEORA"))
+    print(f"(galería: {len(gal)} prendas; parejas: {len(d)}; carpeta: {args.carpeta.name})")
     return 0
 
 

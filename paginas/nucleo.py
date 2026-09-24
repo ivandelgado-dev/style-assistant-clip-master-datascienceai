@@ -375,6 +375,34 @@ def rellenar_etiquetas_desde_cache(usuario_id: int) -> int:
     return n
 
 
+def describir_pendientes_lote(usuario_id: int, limite: int = 60) -> int:
+    """Pide a Gemini las etiquetas de las prendas que no las tienen, de diez
+    en diez (una petición por cada diez), y las guarda. Devuelve cuántas.
+
+    Hace falta antes de un ajuste en palabras: sin etiquetas en el armario,
+    «más oscuro» no tiene contra qué compararse y el orden no cambiaría.
+    """
+    from paginas import armario, etiquetas, gemini
+    pend = armario.sin_etiquetas(BD_USUARIOS, usuario_id)[:limite]
+    if not pend or not gemini.disponible():
+        return 0
+    datos = []
+    for _, foto in pend:
+        try:
+            datos.append((DATOS / foto).read_bytes())
+        except OSError:
+            datos.append(None)
+    modelo = gemini.elegir_modelo()
+    etiquetas.analizar_lote([d for d in datos if d], modelo, aviso=lambda *_: None)
+    n = 0
+    for (pid, _), d in zip(pend, datos):
+        e = etiquetas.en_cache(d, modelo) if d else None
+        if e and e.get("piezas"):
+            armario.guardar_etiquetas(BD_USUARIOS, usuario_id, pid, e["piezas"][0])
+            n += 1
+    return n
+
+
 def segundas_de(d: pd.DataFrame) -> dict:
     """prenda_id -> foto de la segunda toma, para el cambio al pasar el cursor."""
     return {p: b for p, b in zip(d["prenda_id"], d["fichero_b"]) if b}

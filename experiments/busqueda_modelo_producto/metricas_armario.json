@@ -36,6 +36,20 @@
       "mrr": 0.85,
       "n@1": 19,
       "n@3": 21
+    },
+    "estructura": {
+      "acierto@1": 0.708,
+      "acierto@3": 0.917,
+      "mrr": 0.82,
+      "n@1": 17,
+      "n@3": 22
+    },
+    "prioridades": {
+      "acierto@1": 0.667,
+      "acierto@3": 0.958,
+      "mrr": 0.809,
+      "n@1": 16,
+      "n@3": 23
     }
   },
   "frente_a_actual": {
@@ -50,11 +64,26 @@
       "empeora": 3,
       "igual": 15,
       "p_signos": 0.508
+    },
+    "estructura": {
+      "mejora": 1,
+      "empeora": 0,
+      "igual": 23,
+      "p_signos": 1.0
+    },
+    "prioridades_frente_a_estructura": {
+      "mejora": 6,
+      "empeora": 6,
+      "igual": 12,
+      "p_signos": 1.0
     }
   },
   "decision": {
     "entran": [],
-    "ganador": "actual"
+    "ganador": "actual",
+    "nota": "estructura es a posteriori (ver METODOS)",
+    "prioridades_no_empeora_a_estructura": false,
+    "nota_prioridades": "segunda ronda a posteriori; la regla que cuenta es la de la galería real (--armario)"
   },
   "gemini_consultas": {
     "persona_detectada": 24,

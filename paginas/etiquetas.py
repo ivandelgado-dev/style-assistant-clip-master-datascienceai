@@ -134,6 +134,31 @@ Reglas:
 - descripcion: como mucho 10 palabras, en castellano.
 No inventes prendas que no se vean."""
 
+# Fotos de un look (la referencia de Buscar). Las mismas reglas y, además,
+# las capas. Versión aparte: la caché de las prendas del armario y la de la
+# evaluación (e1) no se tocan. Motivo, visto en uso: con una sudadera abierta
+# encima, la IA a veces describía solo la sudadera y el pantalón, y la
+# camiseta de debajo no se buscaba; y con camiseta + sudadera + abrigo solo
+# había sitio para una capa exterior.
+VERSION_LOOK = "l1"
+INSTRUCCIONES_LOOK = INSTRUCCIONES + """
+
+Capas del torso (solo con persona):
+- Lista TODAS las prendas del torso que se vean, de DENTRO a FUERA, en ese
+  orden dentro de la lista.
+- La más interior va en "arriba". Cada capa que vaya por fuera de ella, en
+  "encima": puede haber dos (por ejemplo, sudadera abierta y abrigo).
+- Si una prenda está abierta, debajo hay otra: lístala en "arriba" aunque
+  solo se vea una franja o el cuello.
+- Si en el torso solo hay una prenda cerrada, sigue la regla de posicion de
+  arriba (una sudadera cerrada va en "arriba")."""
+
+# Capa típica de cada tipo de torso: 1 base, 2 intermedia, 3 exterior. Sirve
+# para no proponer una sudadera como «lo de debajo» de otra prenda.
+CAPA = {**dict.fromkeys(["camiseta", "polo", "camisa"], 1),
+        **dict.fromkeys(["sudadera", "jersey", "cardigan"], 2),
+        **dict.fromkeys(["chaleco", "chaqueta", "cazadora", "blazer", "abrigo"], 3)}
+
 
 # ---------------------------------------------------------------------------
 # Análisis con caché
@@ -174,21 +199,22 @@ def normalizar(r: dict) -> dict:
     return {"hay_persona": bool(r.get("hay_persona")), "piezas": piezas}
 
 
-def analizar(imagen: bytes, modelo: str | None = None, pausa: float = 0.0) -> dict:
+def analizar(imagen: bytes, modelo: str | None = None, pausa: float = 0.0,
+             instrucciones: str = INSTRUCCIONES, version: str = VERSION) -> dict:
     """Etiquetas de una foto. La misma foto no se manda dos veces.
 
     Clave de la caché: huella de la imagen + versión del prompt + modelo. Si
     cambia cualquiera de las tres, se vuelve a preguntar.
     """
     modelo = modelo or gemini.elegir_modelo()
-    k = _clave(imagen, modelo)
+    k = _clave(imagen, modelo, version)
     c = _leer_cache()
     if k in c:
         return c[k]
     if pausa:
         time.sleep(pausa)     # para no pasar del límite de peticiones gratuito
-    r = normalizar(gemini.generar_json(modelo, INSTRUCCIONES, imagen, ESQUEMA))
-    r["modelo"], r["version"] = modelo, VERSION
+    r = normalizar(gemini.generar_json(modelo, instrucciones, imagen, ESQUEMA))
+    r["modelo"], r["version"] = modelo, version
     c = _leer_cache()
     c[k] = r
     _guardar_cache(c)
@@ -205,8 +231,36 @@ _LOTE = {
 }
 
 
-def _clave(imagen: bytes, modelo: str) -> str:
-    return f"{hashlib.sha1(imagen).hexdigest()}|{VERSION}|{modelo}"
+def _clave(imagen: bytes, modelo: str, version: str = VERSION) -> str:
+    return f"{hashlib.sha1(imagen).hexdigest()}|{version}|{modelo}"
+
+
+def analizar_look(imagen: bytes, modelo: str | None = None) -> dict:
+    """La referencia de Buscar, con capas (INSTRUCCIONES_LOOK) y completada
+    con completar_capas."""
+    return completar_capas(analizar(imagen, modelo, instrucciones=INSTRUCCIONES_LOOK,
+                                    version=VERSION_LOOK))
+
+
+def completar_capas(etq: dict | None) -> dict | None:
+    """Si hay una capa abierta encima y ninguna pieza «arriba», añade la de
+    debajo, sin describir (inferida=True): una prenda abierta lleva algo
+    debajo aunque la IA no lo haya listado. No toca la caché."""
+    if not etq or not etq.get("hay_persona"):
+        return etq
+    piezas = etq.get("piezas", [])
+    if (any(q["posicion"] == "encima" and q.get("abierta") for q in piezas)
+            and not any(q["posicion"] == "arriba" for q in piezas)):
+        base = {"posicion": "arriba", "tipo": None, "manga": None, "largo": None,
+                "color": None, "estampado": None, "tejido": None, "abierta": False,
+                "descripcion": "", "inferida": True}
+        etq = dict(etq, piezas=[base] + piezas)
+    return etq
+
+
+def capas_encima(etq: dict | None) -> list[dict]:
+    """Las piezas «encima», de dentro a fuera (el orden en que las lista la IA)."""
+    return [q for q in (etq or {}).get("piezas", []) if q["posicion"] == "encima"]
 
 
 def en_cache(imagen: bytes, modelo: str) -> dict | None:
@@ -322,6 +376,85 @@ def penalizacion(ref: dict | None, cand: dict | None) -> float:
     return pen
 
 
+def compatibles(ref: dict | None, cand: dict | None) -> bool:
+    """Mismo tipo o misma familia de tipo (camiseta/polo, sudadera/jersey…)."""
+    if not ref or not cand or not ref.get("tipo") or not cand.get("tipo"):
+        return False
+    if ref["tipo"] == cand["tipo"]:
+        return True
+    f = FAMILIA_TIPO.get(ref["tipo"])
+    return f is not None and f == FAMILIA_TIPO.get(cand["tipo"])
+
+
+def penalizacion_estructura(ref: dict | None, cand: dict | None) -> int:
+    """Qué prenda es, no cómo se ve: tipo, manga y largo. 0 = coincide todo.
+
+    tipo distinto 2 (misma familia 1); manga o largo distintos 2.
+    Solo los campos que se midieron estables y fiables: tipo 105/118 contra
+    las anotaciones del autor, manga 25/27; al repetir, manga y largo 24/24 y
+    tipo 22/24. El color, que es lo que hundía el orden por etiquetas
+    completo con otra luz, NO entra. Es la misma idea que la posición («una
+    bermuda no compite con una camisa»), un nivel más fino: un pantalón corto
+    no compite con uno largo, ni una sudadera con una camiseta.
+    Sin etiqueta en uno de los lados, 0: no se castiga lo que no se sabe.
+    """
+    if not ref or not cand:
+        return 0
+    pen = 0
+    if ref.get("tipo") and cand.get("tipo") and ref["tipo"] != cand["tipo"]:
+        pen += 1 if compatibles(ref, cand) else 2
+    for campo in ("manga", "largo"):
+        a, b = ref.get(campo), cand.get(campo)
+        if a and b and a != "no_aplica" and b != "no_aplica" and a != b:
+            pen += 2
+            break
+    return pen
+
+
+
+def niveles_prioridad(ref: dict | None, cand: dict | None) -> tuple[int, int]:
+    """(dura, blanda) para el orden «prioridades» (busqueda.ORDEN_PRIORIDADES).
+
+    dura: lo que cambia QUÉ prenda es y no se arregla con otro color: familia
+    de tipo distinta (camiseta frente a sudadera) +1, manga o largo distintos
+    +1. Va antes que el color: un pantalón largo negro no sustituye a una
+    bermuda negra.
+    blanda: mismo grupo pero otro tipo (vaquero frente a pantalón, camiseta
+    frente a polo). Es casi siempre una diferencia de tela o de corte, y en el
+    orden que pidió el autor (color, luego tela, luego corte) va DESPUÉS del
+    color: con un pantalón gris oscuro en la foto, un vaquero negro va antes
+    que un pantalón de camuflaje.
+    Sin etiqueta en uno de los lados, (0, 0).
+    """
+    if not ref or not cand:
+        return 0, 0
+    dura = blanda = 0
+    if ref.get("tipo") and cand.get("tipo") and ref["tipo"] != cand["tipo"]:
+        if compatibles(ref, cand):
+            blanda = 1
+        else:
+            dura += 1
+    for campo in ("manga", "largo"):
+        a, b = ref.get(campo), cand.get(campo)
+        if a and b and a != "no_aplica" and b != "no_aplica" and a != b:
+            dura += 1
+            break
+    return dura, blanda
+
+
+def franja_color(ref: dict | None, cand: dict | None) -> int:
+    """Franja de color según las etiquetas de la IA: 0 mismo color, 1 misma
+    familia (FAMILIA_COLOR), 2 otro o desconocido. Es la alternativa a la
+    franja por píxeles (color.delta_cmc) para «prioridades_ia»."""
+    a = (ref or {}).get("color")
+    b = (cand or {}).get("color")
+    if not a or not b:
+        return 2
+    if a == b:
+        return 0
+    f = FAMILIA_COLOR.get(a)
+    return 1 if f is not None and f == FAMILIA_COLOR.get(b) else 2
+
 # ---------------------------------------------------------------------------
 # Ajustes en lenguaje natural («más oscuro», «de manga larga»)
 # ---------------------------------------------------------------------------
@@ -364,7 +497,10 @@ def interpretar_ajuste(texto: str, piezas: list[dict], modelo: str | None = None
         "posicion: la prenda a la que se refiere, o \"todas\". Cada campo "
         "que no cambie: \"sin_cambio\". «Más oscuro» sobre un color claro es "
         "el tono oscuro de esa familia (azul claro -> azul marino; gris -> gris "
-        "oscuro); sobre uno oscuro, negro. entendido: false si la petición no "
+        "oscuro); sobre uno oscuro, negro. Un pantalón corto, unos shorts o "
+        "unas bermudas son tipo \"bermuda\" con largo \"corto\"; si pide "
+        "pantalón largo sin decir de qué, cambia solo el largo. "
+        "entendido: false si la petición no "
         f"trata de la ropa. Valores válidos: tipo {TIPOS}; manga {MANGAS}; "
         f"largo {LARGOS}; color {COLORES}; estampado {ESTAMPADOS}; tejido "
         f"{TEJIDOS}.")
@@ -377,6 +513,15 @@ def interpretar_ajuste(texto: str, piezas: list[dict], modelo: str | None = None
         v = r.get(campo)
         if v in lista:
             out[campo] = v
+    # Coherencia tipo/largo. El modelo tiende a leer «pantalón corto» como
+    # tipo «pantalon» + largo «corto», y eso castigaba justo a las bermudas
+    # (tipo distinto) por delante de los pantalones largos. Visto en uso.
+    if out.get("largo") == "corto" and out.get("tipo") in (None, "pantalon", "vaquero", "chino", "jogger"):
+        out["tipo"] = "bermuda"
+    if out.get("tipo") == "bermuda":
+        out["largo"] = "corto"
+    if out.get("largo") == "largo" and out.get("tipo") == "bermuda":
+        out.pop("tipo")
     return out
 
 

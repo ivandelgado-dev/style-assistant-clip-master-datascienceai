@@ -1,0 +1,13 @@
+clip: openai/clip-vit-base-patch32
+cabeza: experiments/conjunta/cabeza_conjunta.pt
+cintura: 0.52
+version_color: c2
+umbral_mismo: 4.52
+umbral_cercano: 9.05
+distancia_color: CMC(2:1)
+gemini: gemini-3.5-flash-lite
+version_etiquetas: e1
+carpeta: eval_color2
+distractores: ['eval_color']
+torch: 2.11.0+cu128
+dispositivo: cuda

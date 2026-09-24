@@ -18,6 +18,7 @@ import io
 
 import streamlit as st
 import streamlit.components.v1 as componentes
+import numpy as np
 from PIL import Image
 
 from paginas import armario, auth, bienvenida, busqueda, cupula
@@ -1002,41 +1003,92 @@ def buscar():
     # prenda suelta, la foto entera. Cada parte se compara SOLO con las
     # prendas de su posición.
     cajas = busqueda.cajas_look(0.52)
-    umbrales = busqueda.umbrales_color() if busqueda.ORDEN_COLOR else None
+    umbrales = (busqueda.umbrales_color()
+                if busqueda.ORDEN_COLOR or busqueda.ORDEN_PRIORIDADES else None)
     labs = arm[["color_l", "color_a", "color_b"]].to_numpy(dtype=float)
     etqs = arm["etiquetas"].tolist()
     # Ajustes pedidos en lenguaje natural para ESTA foto («de manga larga»).
     clave_aj = f"b_ajustes_{huella}"
     ajustes = st.session_state.setdefault(clave_aj, [])
     columnas = []
+    usados: set = set()
+    from paginas import etiquetas as _etq
+    estructura = busqueda.ORDEN_ESTRUCTURA and etq_ref is not None
+    hay_abierta = bool(etq_ref) and any(
+        q["posicion"] == "encima" for q in (etq_ref or {}).get("piezas", []))
+    # Columnas: una por posición, salvo «encima» con dos capas exteriores
+    # (sudadera abierta y abrigo): una por capa, de dentro a fuera.
+    capas = _etq.capas_encima(etq_ref) if tipo == "persona" else []
+    huecos = []
     for p in elegidas:
+        if p == "encima" and len(capas) >= 2:
+            huecos += [(p, q, "Encima" if k == 0 else "Por fuera")
+                       for k, q in enumerate(capas[:2])]
+        else:
+            huecos.append((p, None, None))
+    for p, pz_capa, titulo in huecos:
+        # Encima marcado y la IA no ve nada encima: no se inventa una capa
+        # (saldría la prenda de encima más parecida a la camiseta, que no está
+        # en la foto). Sin IA no se sabe, y se busca. Si la IA se equivoca, un
+        # ajuste que hable de lo de encima lo reabre.
+        if (p == "encima" and tipo == "persona" and etq_ref and not hay_abierta
+                and not any(a.get("entendido") and a.get("posicion") == "encima"
+                            for a in ajustes)):
+            columnas.append(busqueda.html_columna(
+                p, [], None, aviso="La IA no ve nada encima en esta foto.<br>"
+                "Si lo lleva, díselo abajo: «encima una cazadora negra»."))
+            continue
+        pz = pz_capa or (_etq.pieza(etq_ref, p) if tipo == "persona"
+                         else (etq_ref["piezas"][0] if etq_ref and etq_ref.get("piezas") else None))
+        for aj in ajustes:
+            pz = _etq.aplicar_ajuste(pz, p, aj)
         caja = None
         if tipo == "persona":
             caja = cajas["abajo"] if p == "abajo" else cajas["arriba"]
+            # Con algo abierto encima, «arriba» es lo de DEBAJO, se pida o
+            # no la columna de encima: se mira el centro del torso.
+            if p == "arriba" and estructura and hay_abierta:
+                caja = busqueda.caja_interior(0.52)
+        # Lo de debajo de una capa abierta no puede ser otra capa exterior.
+        bajo_capa = p == "arriba" and tipo == "persona" and hay_abierta
+        mascara = (busqueda.candidatos(pos_arm, etqs, p, pz, bajo_capa)
+                   if (estructura or ajustes) and pz else None)
         idx, _ = busqueda.ordenar(V_arm, pos_arm, busqueda.vector(datos, caja),
-                                  p, ruta)
-        leido = None
+                                  p, ruta, mascara)
+        leido = lab_ref = None
         if umbrales:
             from paginas import color
             lab_ref = (color.color_persona(busqueda.recortar(ref, caja), p)[0]
                        if caja is not None else color.color_prenda(ref)[0])
-            idx = busqueda.ordenar_por_color(idx, labs, lab_ref, umbrales)
             leido = (color.nombre_color(lab_ref), color.lab_a_rgb(lab_ref))
-        # Etiquetas: lo que la IA ve en esta posición, con los ajustes que
-        # haya pedido el usuario. Un ajuste explícito ordena SIEMPRE por
-        # etiquetas: es una petición del usuario, no una conjetura.
-        from paginas import etiquetas as _etq
-        pz = (_etq.pieza(etq_ref, p) if tipo == "persona"
-              else (etq_ref["piezas"][0] if etq_ref and etq_ref.get("piezas") else None))
-        for aj in ajustes:
-            pz = _etq.aplicar_ajuste(pz, p, aj)
+            if busqueda.ORDEN_COLOR:
+                idx = busqueda.ordenar_por_color(idx, labs, lab_ref, umbrales)
+        # Un ajuste explícito ordena SIEMPRE por etiquetas: es una petición
+        # del usuario, no una conjetura.
         if pz and (busqueda.ORDEN_ETIQUETAS or ajustes):
             idx = busqueda.ordenar_por_etiquetas(idx, etqs, pz)
+            if not busqueda.ORDEN_COLOR:
+                leido = None      # el color leído no ha contado: no se enseña
+        elif busqueda.ORDEN_PRIORIDADES_IA and pz and estructura:
+            idx = busqueda.ordenar_por_prioridades(
+                idx, etqs, pz, labs, None, None, color_ia=True)
+            leido = None          # el color que cuenta es el de la IA
+        elif busqueda.ORDEN_PRIORIDADES and lab_ref is not None:
+            idx = busqueda.ordenar_por_prioridades(
+                idx, etqs, pz if estructura else None, labs, lab_ref, umbrales)
+        elif pz and estructura:
+            idx = busqueda.ordenar_por_estructura(idx, etqs, pz)
+        # Una misma prenda no es la principal de dos columnas.
+        if idx.size and int(idx[0]) in usados:
+            libres = [i for i in idx if int(i) not in usados]
+            idx = np.array(libres + [i for i in idx if int(i) in usados])
+        if idx.size:
+            usados.add(int(idx[0]))
         filas = [arm.iloc[int(i)]
                  for i in idx[:1 + busqueda.ALTERNATIVAS + busqueda.MAS]]
         uri = (busqueda.uri_pil(busqueda.recortar(ref, caja), 300)
                if caja is not None else None)
-        columnas.append(busqueda.html_columna(p, filas, uri, leido))
+        columnas.append(busqueda.html_columna(p, filas, uri, leido, titulo=titulo))
 
     with res:
         titulo = ("Tu versión de este look" if tipo == "persona"
@@ -1069,6 +1121,12 @@ def buscar():
                                                    ensure_ascii=False))
                 if aj and aj.get("entendido"):
                     ajustes.append(aj)
+                    # Las prendas sin describir no se pueden comparar con
+                    # «más oscuro»: se describen ahora, de diez en diez.
+                    if arm["etiquetas"].isna().any():
+                        from paginas.nucleo import describir_pendientes_lote
+                        with st.spinner("Describiendo tus prendas…"):
+                            describir_pendientes_lote(u["id"])
                     st.rerun()
                 st.markdown('<p class="nota-form">No he entendido eso como un '
                             'cambio en la ropa. Prueba con el color, la manga, '

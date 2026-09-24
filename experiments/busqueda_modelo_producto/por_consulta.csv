@@ -1,25 +1,25 @@
-consulta,pos,n_galeria,color_modelo,color_producto,franja_objetivo,persona_gemini,pieza_gemini,producto_gemini,pen_objetivo,rango_clip_plano,rango_actual,rango_color_primero,rango_etiquetas
-abajo_01,abajo,8,negro,negro,0,True,vaquero/gris oscuro/no_aplica/largo,vaquero/negro/no_aplica/largo,1.0,3,4,1,1
-abajo_02,abajo,8,gris oscuro,gris oscuro,0,True,vaquero/azul/no_aplica/largo,vaquero/azul/no_aplica/largo,0.0,1,2,1,1
-abajo_03,abajo,8,negro,gris oscuro,2,True,pantalon/verde oscuro/no_aplica/largo,pantalon/verde/no_aplica/largo,1.0,1,1,2,1
-abajo_04,abajo,8,vaquero,azul claro,0,True,vaquero/azul claro/no_aplica/largo,vaquero/azul claro/no_aplica/largo,0.0,2,2,1,1
-abajo_05,abajo,8,negro,azul marino,2,True,vaquero/azul marino/no_aplica/largo,vaquero/azul/no_aplica/largo,1.0,4,1,2,1
-abajo_06,abajo,8,gris,gris claro,1,True,vaquero/gris/no_aplica/largo,vaquero/gris/no_aplica/largo,0.0,4,2,1,1
-abajo_07,abajo,8,gris oscuro,caqui,2,True,bermuda/verde/no_aplica/corto,bermuda/caqui/no_aplica/corto,3.0,3,1,2,1
-abajo_08,abajo,8,rosa,rosa,0,True,bermuda/rosa/no_aplica/corto,bermuda/rosa/no_aplica/corto,0.0,2,1,1,1
-arriba_01,arriba,8,azul claro,azul claro,0,True,camiseta/azul claro/corta/no_aplica,camiseta/azul claro/corta/no_aplica,0.0,1,2,1,1
-arriba_02,arriba,8,blanco,crudo,0,True,camiseta/gris claro/corta/no_aplica,camiseta/beige/corta/no_aplica,2.0,1,6,1,5
-arriba_03,arriba,8,negro,negro,0,True,camiseta/negro/corta/no_aplica,camiseta/negro/corta/no_aplica,1.0,1,1,1,1
-arriba_04,arriba,8,blanco,blanco,0,True,camiseta/rosa/corta/no_aplica,camiseta/rosa/corta/no_aplica,1.0,1,1,1,1
-arriba_05,arriba,8,negro,negro,0,True,camiseta/negro/corta/no_aplica,camiseta/azul marino/corta/no_aplica,3.0,4,3,2,3
-arriba_06,arriba,8,negro,verde oscuro,2,True,camiseta/verde/corta/no_aplica,camiseta/verde oscuro/corta/no_aplica,2.0,1,1,1,1
-arriba_07,arriba,8,rosa palo,rosa palo,0,True,camiseta/rojo/corta/no_aplica,camiseta/rojo/corta/no_aplica,0.0,1,1,1,1
-arriba_08,arriba,8,amarillo,amarillo,0,True,camiseta/amarillo/corta/no_aplica,camiseta/amarillo/corta/no_aplica,1.0,1,1,1,1
-encima_01,encima,8,negro,negro,1,True,cazadora/multicolor/larga/no_aplica,cazadora/multicolor/larga/no_aplica,0.0,1,1,1,1
-encima_02,encima,8,marrón,marrón,1,True,cazadora/marron/larga/no_aplica,cazadora/marron/larga/no_aplica,2.0,1,1,1,1
-encima_03,encima,8,gris,negro,2,True,cazadora/marron/larga/no_aplica,cazadora/burdeos/larga/no_aplica,2.0,1,1,1,2
-encima_04,encima,8,gris claro,crudo,2,True,chaqueta/crudo/larga/no_aplica,chaqueta/crudo/larga/no_aplica,0.0,1,1,1,1
-encima_05,encima,8,burdeos,rojo,2,True,sudadera/rojo/larga/no_aplica,sudadera/rojo/larga/no_aplica,0.0,1,1,1,1
-encima_06,encima,8,negro,negro,2,True,sudadera/negro/larga/no_aplica,sudadera/negro/larga/no_aplica,0.0,1,1,1,1
-encima_07,encima,8,gris oscuro,gris oscuro,1,True,sudadera/marron/larga/no_aplica,sudadera/verde oscuro/larga/no_aplica,2.0,1,1,1,1
-encima_08,encima,8,negro,negro,2,True,sudadera/negro/larga/no_aplica,sudadera/negro/larga/no_aplica,0.0,1,1,2,1
+consulta,pos,n_galeria,color_modelo,color_producto,franja_objetivo,persona_gemini,pieza_gemini,producto_gemini,pen_objetivo,rango_clip_plano,rango_actual,rango_color_primero,rango_etiquetas,rango_estructura,rango_prioridades,n_galeria_estructura
+abajo_01,abajo,8,negro,negro,0,True,vaquero/gris oscuro/no_aplica/largo,vaquero/negro/no_aplica/largo,1.0,3,4,1,1,4,1,8
+abajo_02,abajo,8,gris oscuro,gris oscuro,0,True,vaquero/azul/no_aplica/largo,vaquero/azul/no_aplica/largo,0.0,1,2,1,1,2,1,8
+abajo_03,abajo,8,negro,gris oscuro,2,True,pantalon/verde oscuro/no_aplica/largo,pantalon/verde/no_aplica/largo,1.0,1,1,2,1,1,2,8
+abajo_04,abajo,8,vaquero,azul claro,0,True,vaquero/azul claro/no_aplica/largo,vaquero/azul claro/no_aplica/largo,0.0,2,2,1,1,2,1,8
+abajo_05,abajo,8,negro,azul marino,2,True,vaquero/azul marino/no_aplica/largo,vaquero/azul/no_aplica/largo,1.0,4,1,2,1,1,2,8
+abajo_06,abajo,8,gris,gris claro,1,True,vaquero/gris/no_aplica/largo,vaquero/gris/no_aplica/largo,0.0,4,2,1,1,2,1,8
+abajo_07,abajo,8,gris oscuro,caqui,2,True,bermuda/verde/no_aplica/corto,bermuda/caqui/no_aplica/corto,3.0,3,1,2,1,1,1,8
+abajo_08,abajo,8,rosa,rosa,0,True,bermuda/rosa/no_aplica/corto,bermuda/rosa/no_aplica/corto,0.0,2,1,1,1,1,1,8
+arriba_01,arriba,8,azul claro,azul claro,0,True,camiseta/azul claro/corta/no_aplica,camiseta/azul claro/corta/no_aplica,0.0,1,2,1,1,2,1,8
+arriba_02,arriba,8,blanco,crudo,0,True,camiseta/gris claro/corta/no_aplica,camiseta/beige/corta/no_aplica,2.0,1,6,1,5,6,1,8
+arriba_03,arriba,8,negro,negro,0,True,camiseta/negro/corta/no_aplica,camiseta/negro/corta/no_aplica,1.0,1,1,1,1,1,1,8
+arriba_04,arriba,8,blanco,blanco,0,True,camiseta/rosa/corta/no_aplica,camiseta/rosa/corta/no_aplica,1.0,1,1,1,1,1,1,8
+arriba_05,arriba,8,negro,negro,0,True,camiseta/negro/corta/no_aplica,camiseta/azul marino/corta/no_aplica,3.0,4,3,2,3,3,2,8
+arriba_06,arriba,8,negro,verde oscuro,2,True,camiseta/verde/corta/no_aplica,camiseta/verde oscuro/corta/no_aplica,2.0,1,1,1,1,1,1,8
+arriba_07,arriba,8,rosa palo,rosa palo,0,True,camiseta/rojo/corta/no_aplica,camiseta/rojo/corta/no_aplica,0.0,1,1,1,1,1,1,8
+arriba_08,arriba,8,amarillo,amarillo,0,True,camiseta/amarillo/corta/no_aplica,camiseta/amarillo/corta/no_aplica,1.0,1,1,1,1,1,1,8
+encima_01,encima,8,negro,negro,1,True,cazadora/multicolor/larga/no_aplica,cazadora/multicolor/larga/no_aplica,0.0,1,1,1,1,1,1,8
+encima_02,encima,8,marrón,marrón,1,True,cazadora/marron/larga/no_aplica,cazadora/marron/larga/no_aplica,2.0,1,1,1,1,1,1,8
+encima_03,encima,8,gris,negro,2,True,cazadora/marron/larga/no_aplica,cazadora/burdeos/larga/no_aplica,2.0,1,1,1,2,1,1,8
+encima_04,encima,8,gris claro,crudo,2,True,chaqueta/crudo/larga/no_aplica,chaqueta/crudo/larga/no_aplica,0.0,1,1,1,1,1,1,8
+encima_05,encima,8,burdeos,rojo,2,True,sudadera/rojo/larga/no_aplica,sudadera/rojo/larga/no_aplica,0.0,1,1,1,1,1,1,8
+encima_06,encima,8,negro,negro,2,True,sudadera/negro/larga/no_aplica,sudadera/negro/larga/no_aplica,0.0,1,1,1,1,1,1,8
+encima_07,encima,8,gris oscuro,gris oscuro,1,True,sudadera/marron/larga/no_aplica,sudadera/verde oscuro/larga/no_aplica,2.0,1,1,1,1,1,1,8
+encima_08,encima,8,negro,negro,2,True,sudadera/negro/larga/no_aplica,sudadera/negro/larga/no_aplica,0.0,1,1,2,1,1,2,8

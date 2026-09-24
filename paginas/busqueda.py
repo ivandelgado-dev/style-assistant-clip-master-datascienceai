@@ -133,6 +133,42 @@ def cajas_look(cintura: float) -> dict[str, tuple[float, float, float, float]]:
     }
 
 
+def caja_interior(cintura: float) -> tuple[float, float, float, float]:
+    """Franja central del torso: lo que asoma entre una prenda abierta.
+
+    Con una chaqueta o sudadera abierta encima, la banda de arriba entera es
+    sobre todo la capa exterior, y CLIP ve un solo vector con las dos capas
+    mezcladas. Para buscar lo de DEBAJO se mira solo el centro.
+    """
+    return (0.40, 0.18, 0.60, max(cintura - 0.02, 0.3))
+
+
+def candidatos(pos_arm: np.ndarray, etqs: list, posicion: str, pz,
+               bajo_capa: bool = False) -> np.ndarray:
+    """Qué prendas compiten por una posición.
+
+    Las de esa posición y, si la IA ha descrito la pieza, también las del
+    mismo tipo aunque estén guardadas en otra posición. Motivo, visto en uso:
+    una sudadera de cremallera se guarda «arriba», pero puesta abierta sobre
+    una camiseta va «encima», y la columna de encima no la encontraba.
+
+    Con `bajo_capa` (lo de «arriba» cuando hay algo encima), fuera las
+    prendas de una capa más exterior que la buscada: debajo de una sudadera
+    abierta no se propone otra sudadera. Si no se sabe qué es lo de debajo
+    (pieza inferida), solo capa base: camiseta, polo, camisa. Las prendas sin
+    etiqueta se quedan: no se descarta lo que no se sabe.
+    """
+    from paginas import etiquetas
+    m = pos_arm == posicion
+    if pz and pz.get("tipo"):
+        m = m | np.array([etiquetas.compatibles(pz, e) for e in etqs], dtype=bool)
+    if bajo_capa and posicion == "arriba":
+        limite = etiquetas.CAPA.get((pz or {}).get("tipo"), 1)
+        m = m & np.array([etiquetas.CAPA.get((e or {}).get("tipo"), 0) <= limite
+                          for e in etqs], dtype=bool)
+    return m
+
+
 def recortar(im: Image.Image, caja) -> Image.Image:
     if caja is None:
         return im
@@ -171,13 +207,14 @@ def uri_pil(im: Image.Image, ancho: int = 360) -> str:
 # ---------------------------------------------------------------------------
 
 def ordenar(V_arm: np.ndarray, pos_arm: np.ndarray, v_ref: np.ndarray,
-            posicion: str, ruta) -> tuple[np.ndarray, np.ndarray]:
+            posicion: str, ruta, mascara=None) -> tuple[np.ndarray, np.ndarray]:
     """Índices (sobre el armario) de una posición, de más a menos parecido.
 
     Devuelve (indices, similitudes), ambos ya ordenados. Solo compara contra
     las prendas de esa posición: una bermuda nunca compite con una camisa.
+    `mascara`, si se da, sustituye a «las de esa posición» (ver candidatos).
     """
-    idx = np.flatnonzero(pos_arm == posicion)
+    idx = np.flatnonzero(pos_arm == posicion if mascara is None else mascara)
     if idx.size == 0:
         return idx, np.array([])
     sim = proyectar(V_arm[idx], ruta) @ proyectar(v_ref, ruta)[0]
@@ -263,6 +300,44 @@ def ordenar_por_color(idx: np.ndarray, labs: np.ndarray, lab_ref,
 # atender a los ajustes en lenguaje natural sí va encendido si hay clave: en
 # los dos casos la IA propone y el usuario ve y corrige.
 ORDEN_ETIQUETAS = False
+# Tipo, manga y largo (ver etiquetas.penalizacion_estructura). Decidido tras
+# la evaluación, así que se midió aparte y se declara como análisis a
+# posteriori (docs/resultados_busqueda_modelo_producto.md, §estructura):
+# en las 24 parejas no empeora ninguna consulta en ninguna de las dos
+# galerías (igual en 24/24 y 23/24; mejora 1: del puesto 29 al 11). Su
+# utilidad está en lo que esa prueba no cubre —capas, corto frente a largo—
+# y ahí solo hay ejemplos, no una medida.
+ORDEN_ESTRUCTURA = True
+# «Prioridades»: el orden que pidió el autor (color, luego tela, luego corte)
+# con la estructura delante. Claves, de más a menos importante:
+#   1. estructura dura (familia de tipo, manga, largo; etiquetas.niveles_prioridad)
+#   2. franja de color por píxeles (la de ORDEN_COLOR, umbrales calibrados)
+#   3. estructura blanda (vaquero frente a pantalón, camiseta frente a polo)
+#   4. parecido en la proyección conjunta
+# Por qué hace falta: la proyección se entrenó con los atributos de
+# DeepFashion (textura, tela, forma, partes, estilo), que casi no incluyen el
+# color. Ordena por forma y deja el color fuera; en la prueba modelo →
+# producto la camiseta crudo cae al puesto 29 con ella y es la 1 con CLIP
+# plano o con el color primero. Segunda ronda a posteriori, con la regla
+# escrita ANTES de medirla (src/evaluar_busqueda.py, METODOS): entra si en la
+# galería real no empeora el @1 ni el @3 de «estructura». Hasta entonces, False.
+ORDEN_PRIORIDADES = False
+# Resultado (docs/resultados_busqueda_modelo_producto.md): NO entra. Galería
+# real 16/23 frente a 17/22; limpia 20/24 frente a 17/22. Pierde donde el
+# color leído por píxeles en la foto del modelo cae lejos del del producto.
+#
+# Tercera ronda, con parejas NUEVAS (data/eval_color2) y la regla escrita
+# antes de recogerlas (src/evaluar_busqueda.py, «prioridades_ia»): la misma
+# idea con el color que dice la IA en vez del leído por píxeles.
+ORDEN_PRIORIDADES_IA = False
+# Resultado (30 parejas nuevas, galería de 172): NO entra, 20/26 frente a
+# 23/26. «prioridades» (píxeles), medida ahí solo como réplica, sale 25/29;
+# sumando las dos rondas, 41/52 frente a 40/48. Se sigue la regla: las dos
+# quedan apagadas.
+# Relacionado y con la misma condición: con la IA, cada pieza compite con las
+# prendas de su tipo aunque estén en otra posición, lo de debajo de una
+# prenda abierta se busca en la franja central, y una prenda no se repite
+# como principal en dos columnas.
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
@@ -273,7 +348,7 @@ def analizar_referencia(datos: bytes) -> dict | None:
     if not gemini.disponible():
         return None
     try:
-        return etiquetas.analizar(datos)
+        return etiquetas.analizar_look(datos)
     except gemini.ErrorGemini:
         return None
 
@@ -296,7 +371,39 @@ def ordenar_por_etiquetas(idx: np.ndarray, etqs, pz: dict) -> np.ndarray:
     return idx[np.argsort(pen, kind="stable")]
 
 
+def ordenar_por_estructura(idx: np.ndarray, etqs, pz: dict) -> np.ndarray:
+    """Primero las de la misma manga y el mismo largo; dentro, por parecido."""
+    from paginas import etiquetas
+    pen = np.array([etiquetas.penalizacion_estructura(pz, etqs[i]) for i in idx])
+    return idx[np.argsort(pen, kind="stable")]
+
+
+def ordenar_por_prioridades(idx: np.ndarray, etqs, pz: dict | None,
+                            labs: np.ndarray, lab_ref, umbrales,
+                            color_ia: bool = False) -> np.ndarray:
+    """Reordena `idx` (ya por parecido) por estructura dura, franja de color y
+    estructura blanda; a igualdad de las tres, se conserva el parecido. Una
+    prenda sin color leído va a la última franja; sin etiquetas, niveles 0.
+    Con `color_ia`, la franja sale del color que dice la IA
+    (etiquetas.franja_color) y no de los píxeles."""
+    from paginas import color, etiquetas
+    if color_ia:
+        franja = np.array([etiquetas.franja_color(pz, etqs[i]) for i in idx], dtype=int)
+    else:
+        t1, t2 = umbrales
+        de = np.full(len(idx), np.inf)
+        ok = np.all(np.isfinite(labs[idx]), axis=1)
+        if ok.any():
+            de[ok] = color.delta_cmc(lab_ref, labs[idx][ok])
+        franja = np.where(de <= t1, 0, np.where(de <= t2, 1, 2))
+    niv = np.array([etiquetas.niveles_prioridad(pz, etqs[i]) for i in idx],
+                   dtype=int).reshape(-1, 2)
+    return idx[np.lexsort((np.arange(len(idx)), niv[:, 1], franja, niv[:, 0]))]
+
+
 def describir(pz: dict) -> str:
+    if pz.get("inferida"):
+        return "algo debajo (no se ve bien)"
     partes = [nombre(pz.get("tipo")).lower() if pz.get("tipo") not in (None, "otra") else ""]
     if pz.get("manga") in ("corta", "larga"):
         partes.append(f"manga {pz['manga']}")
@@ -350,14 +457,15 @@ def _mini(r, puesto: int) -> str:
 
 
 def html_columna(posicion: str, filas: list, uri_recorte: str | None,
-                 color_leido=None) -> str:
+                 color_leido=None, aviso: str | None = None,
+                 titulo: str | None = None) -> str:
     """Una posición: la prenda principal, dos parecidas y «Ver más».
 
     `filas` son las prendas de esa posición ya ordenadas de más a menos
     parecida. «Ver más» es un <details> de HTML: se abre en el navegador sin
     volver a ejecutar la página.
     """
-    cab = f'<p class="rot-f pos">{ETIQUETA[posicion]}'
+    cab = f'<p class="rot-f pos">{_html.escape(titulo or ETIQUETA[posicion])}'
     if color_leido:
         # El color que se ha leído en la foto, a la vista: si se equivoca,
         # se ve por qué el orden es el que es.
@@ -365,6 +473,9 @@ def html_columna(posicion: str, filas: list, uri_recorte: str | None,
         cab += (f'<span class="leido"><i style="background:rgb({r},{g},{b})">'
                 f'</i>{_html.escape(nom)}</span>')
     cab += '</p>'
+    if aviso:
+        return (f'<div class="col-pos">{cab}<div class="cuadro grande hueco">'
+                f'<p>{aviso}</p></div></div>')
     if not filas:
         return (f'<div class="col-pos">{cab}<div class="cuadro grande hueco">'
                 f'<p>No tienes prendas de esta posición.<br>Añádelas en Mi '
