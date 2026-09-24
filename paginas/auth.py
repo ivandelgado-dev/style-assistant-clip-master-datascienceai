@@ -71,6 +71,11 @@ def _conexion(bd: Path) -> sqlite3.Connection:
             armario TEXT,                      -- NULL = sin armario propio
             creado  TEXT    NOT NULL
         )""")
+    # Altura, opcional (24/09). Solo la usa una regla de proporción de «Por
+    # estilo» que el usuario ve y puede apagar (paginas/outfits.py). El peso
+    # no se pide: no hay regla que lo use sin juzgar un cuerpo.
+    if "altura_cm" not in {f[1] for f in cx.execute("PRAGMA table_info(usuarios)")}:
+        cx.execute("ALTER TABLE usuarios ADD COLUMN altura_cm INTEGER")
     cx.commit()
     return cx
 
@@ -160,13 +165,27 @@ def datos(bd: Path, idu: int) -> dict | None:
     cx = _conexion(bd)
     try:
         fila = cx.execute(
-            "SELECT id, correo, nombre, armario, creado FROM usuarios"
+            "SELECT id, correo, nombre, armario, creado, altura_cm FROM usuarios"
             " WHERE id = ?", (idu,)).fetchone()
     finally:
         cx.close()
     if fila is None:
         return None
-    return dict(zip(("id", "correo", "nombre", "armario", "creado"), fila))
+    return dict(zip(("id", "correo", "nombre", "armario", "creado", "altura_cm"), fila))
+
+
+def guardar_altura(bd: Path, idu: int, altura_cm: int | None) -> tuple[bool, str]:
+    """Altura en cm, o None para borrarla."""
+    if altura_cm is not None and not 120 <= int(altura_cm) <= 230:
+        return False, "Pon la altura en centímetros, entre 120 y 230."
+    cx = _conexion(bd)
+    try:
+        cx.execute("UPDATE usuarios SET altura_cm = ? WHERE id = ?",
+                   (None if altura_cm is None else int(altura_cm), idu))
+        cx.commit()
+    finally:
+        cx.close()
+    return True, "Altura guardada." if altura_cm else "Altura borrada."
 
 
 def actualizar_nombre(bd: Path, idu: int, nombre: str) -> tuple[bool, str]:

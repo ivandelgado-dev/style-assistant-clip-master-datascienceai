@@ -125,6 +125,36 @@ def _conexion(bd: Path) -> sqlite3.Connection:
             fecha       TEXT    NOT NULL,
             PRIMARY KEY (usuario_id, origen)
         );
+
+        -- Outfits valorados y su valoración (Entrega 3, §4.4-4.6). Se guarda
+        -- un outfit cuando el usuario lo valora: es lo que hace falta para
+        -- medir algún día si las reglas aciertan. `clave` identifica el mismo
+        -- conjunto con el mismo estilo, para que valorar dos veces actualice.
+        CREATE TABLE IF NOT EXISTS outfits (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id  INTEGER NOT NULL REFERENCES usuarios(id),
+            clave       TEXT    NOT NULL,
+            estilo      TEXT,
+            color       TEXT,
+            puntos      REAL,
+            wada        INTEGER,
+            restricciones TEXT,             -- JSON: lo que se pidió
+            creado      TEXT    NOT NULL,
+            UNIQUE (usuario_id, clave)
+        );
+        CREATE TABLE IF NOT EXISTS outfit_items (
+            outfit_id   INTEGER NOT NULL REFERENCES outfits(id) ON DELETE CASCADE,
+            prenda_id   INTEGER NOT NULL REFERENCES prendas(id) ON DELETE CASCADE,
+            posicion    TEXT    NOT NULL,
+            PRIMARY KEY (outfit_id, posicion)
+        );
+        CREATE TABLE IF NOT EXISTS feedback (
+            outfit_id   INTEGER NOT NULL REFERENCES outfits(id) ON DELETE CASCADE,
+            usuario_id  INTEGER NOT NULL REFERENCES usuarios(id),
+            rating      INTEGER NOT NULL CHECK (rating IN (-1, 1)),
+            creado      TEXT    NOT NULL,
+            PRIMARY KEY (outfit_id, usuario_id)
+        );
     """)
     # Columnas añadidas después (23/09): el color leído en los píxeles. Una
     # base creada antes no las tiene; ALTER TABLE las añade sin tocar nada.
@@ -433,3 +463,78 @@ def importar(bd: Path, usuario_id: int, V: np.ndarray, filas: list[dict],
         raise
     finally:
         cx.close()
+
+
+def actualizar_categoria(bd: Path, usuario_id: int, prenda_id: int,
+                         categoria: str, posicion: str) -> bool:
+    """Cambia qué es una prenda propia (y por tanto dónde va). La foto y el
+    vector no cambian: lo que se ve es lo mismo, solo cambia la etiqueta."""
+    cat = clave_categoria(categoria)
+    if not cat or posicion not in ("arriba", "abajo", "encima"):
+        raise ValueError("categoría o posición no válidas")
+    with _conexion(bd) as cx:
+        n = cx.execute("UPDATE prendas SET categoria = ?, posicion = ?"
+                       " WHERE id = ? AND usuario_id = ?",
+                       (cat, posicion, prenda_id, usuario_id)).rowcount
+    return n == 1
+
+
+def actualizar_detalles(bd: Path, usuario_id: int, prenda_id: int,
+                        detalles: dict) -> bool:
+    """Cambia talla, color, corte, tejido y notas de una prenda propia. Mismo
+    recorte que al añadirla: texto sin espacios de más, vacío = NULL."""
+    d = {k: (str(detalles.get(k) or "").strip()[:80] or None)
+         for k in ("talla", "color", "corte", "tejido", "notas")}
+    with _conexion(bd) as cx:
+        n = cx.execute(
+            "UPDATE prendas SET talla = ?, color = ?, corte = ?, tejido = ?, notas = ?"
+            " WHERE id = ? AND usuario_id = ?",
+            (d["talla"], d["color"], d["corte"], d["tejido"], d["notas"],
+             prenda_id, usuario_id)).rowcount
+    return n == 1
+
+
+# ---------------------------------------------------------------------------
+# Valoraciones de outfits
+# ---------------------------------------------------------------------------
+
+def valorar_outfit(bd: Path, usuario_id: int, prendas: dict[str, int], rating: int,
+                   estilo: str | None = None, color: str | None = None,
+                   puntos: float | None = None, wada: int | None = None,
+                   restricciones: dict | None = None) -> int:
+    """Guarda (o actualiza) la valoración de un outfit: +1 me lo pondría, -1 no.
+
+    `prendas` es {posicion: id de prenda}. Solo se aceptan prendas del propio
+    usuario. Devuelve el id del outfit.
+    """
+    if rating not in (-1, 1):
+        raise ValueError("rating es 1 o -1")
+    clave = (estilo or "") + "|" + ",".join(f"{p}:{prendas[p]}" for p in sorted(prendas))
+    with _conexion(bd) as cx:
+        mias = {r[0] for r in cx.execute(
+            f"SELECT id FROM prendas WHERE usuario_id = ? AND id IN "
+            f"({','.join('?' * len(prendas))})", (usuario_id, *prendas.values()))}
+        if mias != set(prendas.values()):
+            raise ValueError("prendas de otro usuario")
+        cx.execute(
+            "INSERT INTO outfits (usuario_id, clave, estilo, color, puntos, wada,"
+            " restricciones, creado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            " ON CONFLICT(usuario_id, clave) DO NOTHING",
+            (usuario_id, clave, estilo, color, puntos, wada,
+             json.dumps(restricciones or {}, ensure_ascii=False), _ahora()))
+        oid = cx.execute("SELECT id FROM outfits WHERE usuario_id = ? AND clave = ?",
+                         (usuario_id, clave)).fetchone()[0]
+        cx.executemany("INSERT OR IGNORE INTO outfit_items VALUES (?, ?, ?)",
+                       [(oid, pid, pos) for pos, pid in prendas.items()])
+        cx.execute("INSERT INTO feedback VALUES (?, ?, ?, ?) ON CONFLICT(outfit_id,"
+                   " usuario_id) DO UPDATE SET rating = excluded.rating,"
+                   " creado = excluded.creado", (oid, usuario_id, rating, _ahora()))
+    return oid
+
+
+def valoraciones(bd: Path, usuario_id: int) -> dict[str, int]:
+    """{clave del outfit: rating} de un usuario."""
+    with _conexion(bd) as cx:
+        return {k: r for k, r in cx.execute(
+            "SELECT o.clave, f.rating FROM outfits o JOIN feedback f ON f.outfit_id = o.id"
+            " WHERE f.usuario_id = ?", (usuario_id,))}

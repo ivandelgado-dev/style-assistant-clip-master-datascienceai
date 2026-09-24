@@ -235,6 +235,36 @@ def _clave(imagen: bytes, modelo: str, version: str = VERSION) -> str:
     return f"{hashlib.sha1(imagen).hexdigest()}|{version}|{modelo}"
 
 
+
+def efectivas(e: dict | None, categoria: str | None, posicion: str | None = None,
+              tejido: str | None = None, color: str | None = None) -> dict | None:
+    """Las etiquetas con las que se trabaja: las de la IA, corregidas por lo
+    que ha dicho el usuario. Lo declarado manda (visto en uso: la IA llamaba
+    «pantalon» a joggers que el autor tenía como jogger, y «camiseta» a una
+    sudadera). Solo se aplica si el valor está en las listas cerradas; texto
+    libre que no encaja no pisa nada. Sin etiquetas de la IA, la categoría
+    sola ya da el tipo."""
+    from paginas.armario import clave_categoria
+    cat = clave_categoria(categoria) if isinstance(categoria, str) else ""
+    tej = clave_categoria(tejido) if isinstance(tejido, str) else ""
+    col = clave_categoria(color) if isinstance(color, str) else ""
+    if not e and cat not in TIPOS:
+        return e
+    out = dict(e) if e else {"posicion": posicion, "tipo": None, "manga": None,
+                             "largo": None, "color": None, "estampado": None,
+                             "tejido": None, "abierta": False, "descripcion": ""}
+    if cat in TIPOS:
+        out["tipo"] = cat
+        if cat == "bermuda":
+            out["largo"] = "corto"
+        if cat == "vaquero" and not tej:
+            out["tejido"] = "vaquero"
+    if tej in TEJIDOS:
+        out["tejido"] = tej
+    if col in COLORES:
+        out["color"] = col
+    return out
+
 def analizar_look(imagen: bytes, modelo: str | None = None) -> dict:
     """La referencia de Buscar, con capas (INSTRUCCIONES_LOOK) y completada
     con completar_capas."""

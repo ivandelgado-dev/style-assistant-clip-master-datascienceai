@@ -620,10 +620,14 @@ def _mi_cuenta():
       verificación, cualquiera con una sesión abierta podría llevarse la cuenta
       a un correo suyo.
 
-    Lo que NO aparece, aunque el esquema de la entrega 3 lo contemple: altura,
-    peso y preferencias. Ningún componente del sistema los usa, y pedir datos
-    corporales que no se van a usar para nada va contra el principio de
-    minimización de datos. Si algún día hay algo que los use, se piden ahí.
+    - **Altura**: opcional, desde el 24/09. La usa UNA regla de «Por estilo»
+      (paginas/outfits.py, proporción): con menos de 1,70 m sube los looks
+      de poco contraste entre arriba y abajo. Se ve, se explica y se apaga.
+
+    Lo que NO aparece, aunque el esquema de la entrega 3 lo contemple: peso y
+    preferencias. El peso no lo usa nada: toda regla de estilismo basada en el
+    peso sirve para «disimular», y eso ya es un juicio sobre el cuerpo. Pedir
+    un dato corporal que no se usa va contra la minimización de datos.
     """
     u = usuario()
     d = auth.datos(BD_USUARIOS, u["id"]) or u
@@ -667,6 +671,24 @@ def _mi_cuenta():
                 ok, msg = auth.actualizar_nombre(BD_USUARIOS, d["id"], nombre)
                 if ok:
                     st.session_state["usuario"]["nombre"] = nombre.strip()
+                st.session_state["aviso_cuenta"] = ("ok" if ok else "error", msg)
+                st.rerun()
+
+        st.markdown('<div style="height:34px;"></div>'
+                    '<p class="rot-f revela" style="margin-bottom:4px;">'
+                    'Altura (opcional)</p>', unsafe_allow_html=True)
+        with st.form("altura", border=False):
+            alt = st.number_input("Altura en cm", min_value=0, max_value=230, step=1,
+                                  value=int(d.get("altura_cm") or 0), key="c_altura",
+                                  help="0 = sin decir")
+            st.markdown('<p class="nota-form" style="margin-top:6px;">Solo para '
+                        'una sugerencia en «Por estilo»: con menos de 1,70 m, '
+                        'primero los looks con poco contraste entre arriba y '
+                        'abajo, que alargan la figura. No quita ningún look y se '
+                        'puede apagar. El peso no se pide.</p>'
+                        '<div style="height:12px;"></div>', unsafe_allow_html=True)
+            if st.form_submit_button("Guardar altura", type="primary"):
+                ok, msg = auth.guardar_altura(BD_USUARIOS, d["id"], int(alt) or None)
                 st.session_state["aviso_cuenta"] = ("ok" if ok else "error", msg)
                 st.rerun()
 
@@ -836,6 +858,14 @@ def acceso():
 # 7. BUSCAR
 # ===========================================================================
 
+@st.dialog("Tu foto", width="large")
+def _ampliar(im):
+    """La foto sola, grande y centrada sobre la página oscurecida (estilo.py,
+    .amplia). Es un st.dialog sin caja: así Esc y la X siguen funcionando."""
+    st.markdown(f'<div class="amplia"><img src="{busqueda.uri_pil(im, 1400)}" '
+                f'alt="Tu foto"></div>', unsafe_allow_html=True)
+
+
 def buscar():
     if not exige_sesion(PAGINAS["acceso"]):
         return
@@ -871,7 +901,21 @@ def buscar():
     # creada por el usuario («sobrecamisa») lleva la posición que él eligió.
     pos_arm = arm["posicion"].to_numpy(dtype=object)
 
+    # Dos maneras de buscar: parecerse a una foto, o vestir un estilo con tu
+    # ropa (paginas/pantalla_estilo.py). Son dos pantallas, no un filtro: van
+    # como pestañas a todo el ancho, encima de las columnas, con el mismo
+    # subrayado que la barra de navegación (estilo.py, .st-key-b_modo).
+    st.markdown('<div style="height:18px;"></div>', unsafe_allow_html=True)
+    modo = st.segmented_control(
+        "Cómo buscar", ["foto", "estilo"], default="foto", key="b_modo",
+        format_func={"foto": "Desde una foto", "estilo": "Por estilo"}.get,
+        label_visibility="collapsed") or "foto"
+
     panel, _, res = st.columns([1, 0.06, 3.1], gap="large")
+    if modo == "estilo":
+        from paginas import pantalla_estilo
+        pantalla_estilo.por_estilo(u, arm, panel, res, pie)
+        return
 
     with panel:
         st.markdown('<div class="panel-busqueda"></div>'
@@ -879,7 +923,7 @@ def buscar():
                     unsafe_allow_html=True)
         subida = st.file_uploader("Foto de referencia",
                                   type=["jpg", "jpeg", "png", "webp"],
-                                  label_visibility="collapsed")
+                                  key="b_foto", label_visibility="collapsed")
         datos = subida.getvalue() if subida is not None else None
         if datos:
             ref = Image.open(io.BytesIO(datos)).convert("RGB")
@@ -946,11 +990,36 @@ def buscar():
         st.markdown('<div style="height:24px;"></div>'
                     '<p class="rot-f" style="margin-bottom:6px;">Qué hay en '
                     'la foto</p>', unsafe_allow_html=True)
-        tipo = st.segmented_control(
-            "Qué hay en la foto", ["persona", "prenda"], default=tipo_def,
-            format_func={"persona": "Una persona",
-                         "prenda": "Una prenda suelta"}.get,
-            key=f"b_tipo_{huella}", label_visibility="collapsed") or tipo_def
+        # Con IA, esto no se pregunta: lo decide ella (persona 24/24 en las
+        # fotos de modelo, prenda suelta 118/118 en el armario) y se enseña,
+        # con un botón por si se equivoca. Sin IA, se pregunta, explicando
+        # para qué sirve cada opción.
+        EXPLICA = {"persona": "Se corta la foto por zonas y cada parte se busca "
+                              "en su posición.",
+                   "prenda": "Se usa la foto entera y se busca en una sola "
+                             "posición."}
+        k_manual = f"b_tipo_manual_{huella}"
+        if etq_ref and etq_ref.get("piezas") and not st.session_state.get(k_manual):
+            tipo = tipo_def
+            st.markdown(f'<p class="nota-form" style="margin:0;"><b>La IA ve '
+                        f'{"una persona vestida" if tipo == "persona" else "una prenda suelta"}'
+                        f'.</b> {EXPLICA[tipo]}</p>', unsafe_allow_html=True)
+            if st.button("¿No es así? Cámbialo", key=f"b_tipo_btn_{huella}",
+                         type="tertiary"):
+                st.session_state[k_manual] = True
+                st.rerun()
+        else:
+            tipo = st.segmented_control(
+                "Qué hay en la foto", ["persona", "prenda"], default=tipo_def,
+                format_func={"persona": "Una persona",
+                             "prenda": "Una prenda suelta"}.get,
+                key=f"b_tipo_{huella}", label_visibility="collapsed") or tipo_def
+            st.markdown(f'<p class="nota-form">{EXPLICA[tipo]}</p>',
+                        unsafe_allow_html=True)
+            if tipo == "prenda" and etq_ref and etq_ref.get("hay_persona"):
+                st.markdown('<p class="nota-form">Ojo: la IA ve a una persona '
+                            'vestida. Con «Una persona» sale mejor.</p>',
+                            unsafe_allow_html=True)
 
         st.markdown('<div style="height:16px;"></div>'
                     '<p class="rot-f" style="margin-bottom:6px;">Qué buscas'
@@ -975,6 +1044,21 @@ def buscar():
                             f'prendas, Akin cree que va '
                             f'{busqueda.ETIQUETA[pos_def].lower()}. Si no, '
                             f'cámbialo.</p>', unsafe_allow_html=True)
+        # Qué pesa más al ordenar. Por defecto, el orden medido («estructura»);
+        # color o tela solo si el usuario lo pide. Es la idea del trabajo
+        # llevada a la pantalla: consultar por un atributo y no por el todo.
+        st.markdown('<div style="height:12px;"></div><p class="rot-f" '
+                    'style="margin-bottom:6px;">Qué pesa más</p>',
+                    unsafe_allow_html=True)
+        prioridad = st.segmented_control(
+            "Qué pesa más", list(busqueda.PRIORIDADES_USUARIO), default="parecido",
+            key="b_prioridad", format_func=busqueda.PRIORIDADES_USUARIO.get,
+            label_visibility="collapsed") or "parecido"
+        if prioridad != "parecido":
+            st.markdown(f'<p class="nota-form">Primero lo del mismo '
+                        f'{"color" if prioridad == "color" else "tejido"}; '
+                        f'después, lo más parecido. «Parecido» es el orden que se '
+                        f'midió en la evaluación.</p>', unsafe_allow_html=True)
         if etq_ref and etq_ref.get("piezas"):
             ve = " · ".join(_html.escape(busqueda.describir(q))
                             for q in sorted(etq_ref["piezas"],
@@ -986,7 +1070,16 @@ def buscar():
         # La foto va DESPUÉS de las preguntas: si no, en un portátil las
         # preguntas quedaban por debajo del borde de la pantalla.
         st.markdown('<div style="height:20px;"></div>', unsafe_allow_html=True)
-        st.image(ref, width="stretch")
+        # Sin el «pantalla completa» de Streamlit: dejaba los resultados por
+        # encima de la foto ampliada (se veían las dos cosas a la vez). Se
+        # amplía en un diálogo propio, que tapa la página entera.
+        # El botón va DENTRO de la foto, en la esquina, y aparece al pasar el
+        # ratón (estilo.py, .st-key-b_fotoref).
+        with st.container(key="b_fotoref"):
+            st.image(ref, width="stretch")
+            if st.button(":material/open_in_full:", key=f"b_ampliar_{huella}",
+                         help="Ampliar"):
+                _ampliar(ref)
 
     elegidas = [p for p in busqueda.ORDEN if p in elegidas]
     if not elegidas:
@@ -1003,8 +1096,12 @@ def buscar():
     # prenda suelta, la foto entera. Cada parte se compara SOLO con las
     # prendas de su posición.
     cajas = busqueda.cajas_look(0.52)
-    umbrales = (busqueda.umbrales_color()
-                if busqueda.ORDEN_COLOR or busqueda.ORDEN_PRIORIDADES else None)
+    # El color de la foto se lee siempre (son píxeles, milisegundos): o
+    # para ordenar, si se pide, o para avisar cuando la primera propuesta
+    # no es de ese color.
+    umbrales = busqueda.umbrales_color()
+    color_cuenta = (busqueda.ORDEN_COLOR or busqueda.ORDEN_PRIORIDADES
+                    or prioridad in ("color", "tela"))
     labs = arm[["color_l", "color_a", "color_b"]].to_numpy(dtype=float)
     etqs = arm["etiquetas"].tolist()
     # Ajustes pedidos en lenguaje natural para ESTA foto («de manga larga»).
@@ -1038,8 +1135,13 @@ def buscar():
                 p, [], None, aviso="La IA no ve nada encima en esta foto.<br>"
                 "Si lo lleva, díselo abajo: «encima una cazadora negra»."))
             continue
-        pz = pz_capa or (_etq.pieza(etq_ref, p) if tipo == "persona"
-                         else (etq_ref["piezas"][0] if etq_ref and etq_ref.get("piezas") else None))
+        # La pieza que se busca es la de ESTA posición. Con «prenda suelta»
+        # antes se cogía la primera pieza que describía la IA, fuera la que
+        # fuera: con una foto de persona marcada como prenda suelta y «Abajo»,
+        # se buscaba la camiseta en la columna de abajo (visto en uso).
+        piezas_ref = (etq_ref or {}).get("piezas") or []
+        pz = pz_capa or _etq.pieza(etq_ref, p) or (
+            piezas_ref[0] if tipo == "prenda" and len(piezas_ref) == 1 else None)
         for aj in ajustes:
             pz = _etq.aplicar_ajuste(pz, p, aj)
         caja = None
@@ -1060,7 +1162,8 @@ def buscar():
             from paginas import color
             lab_ref = (color.color_persona(busqueda.recortar(ref, caja), p)[0]
                        if caja is not None else color.color_prenda(ref)[0])
-            leido = (color.nombre_color(lab_ref), color.lab_a_rgb(lab_ref))
+            leido = ((color.nombre_color(lab_ref), color.lab_a_rgb(lab_ref))
+                     if color_cuenta else None)
             if busqueda.ORDEN_COLOR:
                 idx = busqueda.ordenar_por_color(idx, labs, lab_ref, umbrales)
         # Un ajuste explícito ordena SIEMPRE por etiquetas: es una petición
@@ -1069,6 +1172,12 @@ def buscar():
             idx = busqueda.ordenar_por_etiquetas(idx, etqs, pz)
             if not busqueda.ORDEN_COLOR:
                 leido = None      # el color leído no ha contado: no se enseña
+        elif prioridad == "color" and lab_ref is not None:
+            idx = busqueda.ordenar_por_prioridades(
+                idx, etqs, pz if estructura else None, labs, lab_ref, umbrales,
+                con_nombres=bool(pz and pz.get("color")))
+        elif prioridad == "tela" and pz:
+            idx = busqueda.ordenar_por_tela(idx, etqs, pz, labs, lab_ref, umbrales)
         elif busqueda.ORDEN_PRIORIDADES_IA and pz and estructura:
             idx = busqueda.ordenar_por_prioridades(
                 idx, etqs, pz, labs, None, None, color_ia=True)
@@ -1088,7 +1197,22 @@ def buscar():
                  for i in idx[:1 + busqueda.ALTERNATIVAS + busqueda.MAS]]
         uri = (busqueda.uri_pil(busqueda.recortar(ref, caja), 300)
                if caja is not None else None)
-        columnas.append(busqueda.html_columna(p, filas, uri, leido, titulo=titulo))
+        # Con «Parecido», la proyección ordena por forma y no ve el color.
+        # Si la primera es de otro color que el leído en la foto, se dice, y
+        # se dice cómo pedirlo: es la consulta por atributo del trabajo.
+        nota = None
+        if (prioridad == "parecido" and lab_ref is not None and idx.size and umbrales
+                and np.all(np.isfinite(labs[int(idx[0])]))):
+            from paginas import color
+            # Se avisa solo si tampoco coincide el nombre del color: con negros
+            # la ΔE exagera (ver busqueda._franja_nombres).
+            if (float(color.delta_cmc(lab_ref, labs[int(idx[0])][None])[0]) > umbrales[1]
+                    and _etq.franja_color(pz, etqs[int(idx[0])]) == 2):
+                nota = (f"No es del color que se lee en la foto "
+                        f"({color.nombre_color(lab_ref)}). Con «Color» en «Qué pesa "
+                        f"más» sale primero lo de ese color.")
+        columnas.append(busqueda.html_columna(p, filas, uri, leido, titulo=titulo,
+                                              nota=nota))
 
     with res:
         titulo = ("Tu versión de este look" if tipo == "persona"
@@ -1123,7 +1247,9 @@ def buscar():
                     ajustes.append(aj)
                     # Las prendas sin describir no se pueden comparar con
                     # «más oscuro»: se describen ahora, de diez en diez.
-                    if arm["etiquetas"].isna().any():
+                    # Sin describir por la IA (en la base; la tabla ya lleva
+                    # etiquetas mínimas sacadas de la categoría).
+                    if armario.sin_etiquetas(BD_USUARIOS, u["id"]):
                         from paginas.nucleo import describir_pendientes_lote
                         with st.spinner("Describiendo tus prendas…"):
                             describir_pendientes_lote(u["id"])

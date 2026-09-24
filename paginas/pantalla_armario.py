@@ -199,8 +199,12 @@ def _dialogo_anadir(uid: int):
                                   value=(sug or {}).get("color") or "",
                                   placeholder="Azul marino…")
             c3, c4 = st.columns(2)
-            corte = c3.text_input("Corte", key=f"arm_cu_{s_}",
-                                  placeholder="Recto, oversize…")
+            # Desplegable y no texto libre: «holgado» es lo que usa el estilo
+            # Oversize (paginas/outfits.py). La IA no mide el ajuste de una
+            # prenda extendida, así que esto solo lo sabe el usuario.
+            corte = c3.selectbox("Corte", ["", "ajustado", "recto", "holgado"],
+                                 key=f"arm_cu_{s_}",
+                                 format_func=lambda v: v.capitalize() if v else "Sin decir")
             tejido = c4.text_input("Tejido", key=f"arm_te_{s_}",
                                    value=((sug or {}).get("tejido") or "").replace("otro", ""),
                                    placeholder="Algodón, lino…")
@@ -283,6 +287,71 @@ def _dialogo_quitar(uid: int, fila: dict):
         st.rerun()
 
 
+@st.dialog("Detalles de la prenda")
+def _dialogo_editar(uid: int, fila: dict):
+    """Talla, color, corte, tejido y notas de una prenda que ya está. El corte
+    es lo que usa el estilo Oversize; el resto, para distinguir tus prendas."""
+    uri = dato_uri(fila["foto"], ancho=420)
+    st.markdown(f'<div class="marco" style="margin-bottom:14px;"><img class="a" '
+                f'src="{uri}" alt=""></div>', unsafe_allow_html=True)
+    k = f'ed_{fila["id"]}'
+    ia = fila.get("etiquetas") if isinstance(fila.get("etiquetas"), dict) else {}
+    ve = ", ".join(str(_legible(x)) for x in (
+        ia.get("color"), ia.get("tejido") if ia.get("tejido") != "otro" else None,
+        f'manga {ia["manga"]}' if ia.get("manga") in ("corta", "larga") else None,
+        ia.get("estampado") if ia.get("estampado") not in (None, "liso") else None) if x)
+    st.markdown(
+        '<p class="nota-form">'
+        + (f'<b>La IA ya ve:</b> {_html.escape(ve)}. Eso ya se usa al buscar y al '
+           'montar outfits, no hace falta copiarlo aquí. ' if ve else
+           'La IA aún no ha descrito esta prenda. ')
+        + 'Rellena solo lo que quieras corregir o lo que la IA no puede saber: '
+          'la <b>talla</b> y el <b>corte</b> (holgado = estilo Oversize). Lo que '
+          'escribas aquí manda sobre lo que ve la IA.</p>', unsafe_allow_html=True)
+
+    def v(c):          # None o NaN de pandas -> ""
+        x = fila.get(c)
+        return x if isinstance(x, str) else ""
+    # Qué es: la categoría manda sobre lo que diga la IA (etiquetas.efectivas)
+    # y decide la posición. Se puede corregir aquí.
+    propias = armario.categorias_propias(BD_USUARIOS, uid)
+    cats = _predefinidas() + sorted(c for c in propias if c not in POSICION)
+    actual_cat = str(fila.get("categoria") or "")
+    if actual_cat and actual_cat not in cats:
+        cats.append(actual_cat)
+    cat = st.selectbox("Qué es", cats, index=cats.index(actual_cat) if actual_cat in cats else 0,
+                       key=f"{k}_cat", format_func=nombre)
+    nueva_pos = POSICION.get(cat) or propias.get(cat) or fila.get("posicion")
+    if cat != actual_cat and nueva_pos != fila.get("posicion"):
+        st.markdown(f'<p class="nota-form">Pasará a <b>{ETIQUETA[nueva_pos].lower()}'
+                    f'</b>.</p>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    talla = c1.text_input("Talla", value=v("talla"), key=f"{k}_ta")
+    color = c2.text_input("Color", value=v("color"), key=f"{k}_co",
+                          placeholder=_legible(ia.get("color")) or "")
+    c3, c4 = st.columns(2)
+    opciones = ["", "ajustado", "recto", "holgado"]
+    actual = v("corte").strip().lower()
+    corte = c3.selectbox("Corte", opciones + ([actual] if actual not in opciones else []),
+                         index=(opciones + [actual]).index(actual) if actual else 0,
+                         key=f"{k}_cu",
+                         format_func=lambda v: v.capitalize() if v else "Sin decir")
+    tejido = c4.text_input("Tejido", value=v("tejido"), key=f"{k}_te",
+                           placeholder=_legible(ia.get("tejido")) or "")
+    notas = st.text_input("Notas", value=v("notas"), key=f"{k}_no")
+    b1, b2 = st.columns(2)
+    if b1.button("Guardar", type="primary", use_container_width=True):
+        if cat != actual_cat:
+            armario.actualizar_categoria(BD_USUARIOS, uid, int(fila["id"]), cat, nueva_pos)
+        armario.actualizar_detalles(BD_USUARIOS, uid, int(fila["id"]),
+                                    {"talla": talla, "color": color, "corte": corte,
+                                     "tejido": tejido, "notas": notas})
+        st.session_state["aviso_armario"] = "Detalles guardados."
+        st.rerun()
+    if b2.button("Cancelar", use_container_width=True):
+        st.rerun()
+
+
 def _describir_pendientes(uid: int):
     """Botón para que la IA describa las prendas que aún no tienen etiquetas
     (las de antes de existir esto). Una a una, con pausa: el nivel gratuito
@@ -343,6 +412,57 @@ def _tarjeta(f) -> str:
             f'<img class="a" src="{a}" alt="">'
             f'</div><div class="pie"><p class="nom">{_html.escape(nombre(f["categoria"]))}'
             f'</p><p class="desc">{_html.escape(desc)}</p></div></div>')
+
+
+# Cómo se leen los valores de la IA (se guardan sin tildes).
+LEGIBLE = {"algodon": "algodón", "sintetico": "sintético", "marron": "marrón",
+           "pantalon": "pantalón", "cardigan": "cárdigan"}
+
+
+def _legible(v):
+    return LEGIBLE.get(v, v) if v else v
+
+
+CINTA_MAX = 16     # tarjetas en la cinta (van duplicadas: 32 imágenes)
+
+
+def _cinta(arm) -> str:
+    """Cinta automática de prendas, como la de profesores de Evolve: tarjeta
+    con la etiqueta arriba y una ficha blanca abajo, en bucle, que se para al
+    pasar el cursor. Solo CSS (clases .cinta/.pista de estilo.py).
+
+    Qué prendas: una de cada categoría por turnos, empezando por las más
+    recientes, hasta CINTA_MAX, para que se vea la variedad del armario y no
+    diez camisetas seguidas. Determinista: mismo armario, misma cinta.
+    """
+    grupos = {}
+    for _, f in arm.sort_values("creado", ascending=False).iterrows():
+        grupos.setdefault(f["categoria"], []).append(f)
+    elegidas, k = [], 0
+    while len(elegidas) < CINTA_MAX and any(k < len(g) for g in grupos.values()):
+        for g in grupos.values():
+            if k < len(g) and len(elegidas) < CINTA_MAX:
+                elegidas.append(g[k])
+        k += 1
+    tarjetas = []
+    for f in elegidas:
+        e = f["etiquetas"] if isinstance(f["etiquetas"], dict) else {}
+        uri = dato_uri(f["fichero"], ancho=300, rellenar=False)
+        titulo = nombre(f["categoria"]) + (f' {_legible(e["color"])}' if e.get("color") else "")
+        sub = " · ".join(x for x in (
+            _legible(e.get("tejido")) if e.get("tejido") not in (None, "otro") else None,
+            f'manga {e["manga"]}' if e.get("manga") in ("corta", "larga") else None,
+            ETIQUETA.get(f["posicion"], "")) if x)
+        tarjetas.append(
+            f'<article class="lk cintalk"><span class="chip">'
+            f'{_html.escape(nombre(f["categoria"]))}</span>'
+            f'<div class="lienzo uno"><div><img src="{uri}" alt="" loading="lazy">'
+            f'</div></div><div class="ficha-look"><p class="t">{_html.escape(titulo)}</p>'
+            f'<p class="d">{_html.escape(sub)}</p></div></article>')
+    fila = "".join(tarjetas)
+    # Duplicada: la pista se desplaza un -50 % y vuelve al principio sin salto.
+    return busqueda.compactar(f'<div class="cinta cinta-armario"><div class="pista">'
+                              f'{fila}{fila}</div></div>')
 
 
 def mi_armario():
@@ -411,6 +531,10 @@ def mi_armario():
                     f'{" ni de ".join(faltan)}: esa parte de un look no puede '
                     f'salir en la búsqueda.</p></div>', unsafe_allow_html=True)
 
+    if n >= 6:
+        st.markdown('<div style="height:22px;"></div>' + _cinta(arm),
+                    unsafe_allow_html=True)
+
     st.markdown('<div style="height:26px;"></div>', unsafe_allow_html=True)
     etiquetas = ["Todo"] + [f"{ETIQUETA[p]} · {por_pos[p]}"
                             for p in ORDEN_POS if por_pos.get(p)]
@@ -438,7 +562,11 @@ def mi_armario():
                 for col, f in zip(cols, filas[i:i + COLUMNAS]):
                     with col:
                         st.markdown(_tarjeta(f), unsafe_allow_html=True)
-                        if st.button("Quitar", key=f"arm_q_{f['id']}",
+                        e1, e2 = st.columns(2, gap="small")
+                        if e1.button("Detalles", key=f"arm_e_{f['id']}",
+                                     type="tertiary"):
+                            _dialogo_editar(u["id"], f.to_dict())
+                        if e2.button("Quitar", key=f"arm_q_{f['id']}",
                                      type="tertiary"):
                             _dialogo_quitar(u["id"], f.to_dict())
     pie()

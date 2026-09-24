@@ -143,6 +143,9 @@ def caja_interior(cintura: float) -> tuple[float, float, float, float]:
     return (0.40, 0.18, 0.60, max(cintura - 0.02, 0.3))
 
 
+PARTE_ABAJO = {"pantalon", "vaquero", "chino", "jogger", "bermuda"}
+
+
 def candidatos(pos_arm: np.ndarray, etqs: list, posicion: str, pz,
                bajo_capa: bool = False) -> np.ndarray:
     """Qué prendas compiten por una posición.
@@ -161,7 +164,14 @@ def candidatos(pos_arm: np.ndarray, etqs: list, posicion: str, pz,
     from paginas import etiquetas
     m = pos_arm == posicion
     if pz and pz.get("tipo"):
-        m = m | np.array([etiquetas.compatibles(pz, e) for e in etqs], dtype=bool)
+        # Solo se añaden prendas de otra posición si son de la misma PARTE del
+        # cuerpo que la columna: a «abajo» nunca llega una camiseta, ni a
+        # «arriba» un pantalón, aunque la pieza buscada esté mal descrita.
+        def de_su_parte(e):
+            t = (e or {}).get("tipo")
+            return (t in PARTE_ABAJO) if posicion == "abajo" else (t in etiquetas.CAPA)
+        m = m | np.array([etiquetas.compatibles(pz, e) and de_su_parte(e) for e in etqs],
+                         dtype=bool)
     if bajo_capa and posicion == "arriba":
         limite = etiquetas.CAPA.get((pz or {}).get("tipo"), 1)
         m = m & np.array([etiquetas.CAPA.get((e or {}).get("tipo"), 0) <= limite
@@ -380,7 +390,8 @@ def ordenar_por_estructura(idx: np.ndarray, etqs, pz: dict) -> np.ndarray:
 
 def ordenar_por_prioridades(idx: np.ndarray, etqs, pz: dict | None,
                             labs: np.ndarray, lab_ref, umbrales,
-                            color_ia: bool = False) -> np.ndarray:
+                            color_ia: bool = False,
+                            con_nombres: bool = False) -> np.ndarray:
     """Reordena `idx` (ya por parecido) por estructura dura, franja de color y
     estructura blanda; a igualdad de las tres, se conserva el parecido. Una
     prenda sin color leído va a la última franja; sin etiquetas, niveles 0.
@@ -396,9 +407,64 @@ def ordenar_por_prioridades(idx: np.ndarray, etqs, pz: dict | None,
         if ok.any():
             de[ok] = color.delta_cmc(lab_ref, labs[idx][ok])
         franja = np.where(de <= t1, 0, np.where(de <= t2, 1, 2))
+        if con_nombres:
+            franja = np.minimum(franja, _franja_nombres(idx, etqs, pz))
     niv = np.array([etiquetas.niveles_prioridad(pz, etqs[i]) for i in idx],
                    dtype=int).reshape(-1, 2)
     return idx[np.lexsort((np.arange(len(idx)), niv[:, 1], franja, niv[:, 0]))]
+
+
+def _franja_nombres(idx, etqs, pz) -> np.ndarray:
+    """Franja por el NOMBRE del color (el de la IA, o el declarado): 0 mismo,
+    1 misma familia, 2 otro o desconocido. En el modo «Color», elegido por el
+    usuario, cuenta la mejor de las dos lecturas (píxeles o nombre).
+
+    Motivo, visto en uso: con negros, la ΔE CMC se dispara. Su tolerancia de
+    claridad es muy estrecha por debajo de L* 16, y un negro de estudio
+    (L* ~5) queda «lejos» de un vaquero negro fotografiado en casa (L* 13),
+    así que un cargo marrón salía primero. El nombre («negro» / «negro») no
+    tiene ese problema. Es una variante NO medida en la evaluación: solo se
+    usa cuando el usuario elige «Color» o «Tela»."""
+    from paginas import etiquetas
+    return np.array([etiquetas.franja_color(pz, etqs[i]) for i in idx], dtype=int)
+
+
+def _tela(e: dict | None) -> str | None:
+    if not e:
+        return None
+    if e.get("tipo") == "vaquero":
+        return "vaquero"
+    t = e.get("tejido")
+    return None if t in (None, "otro") else t
+
+
+def ordenar_por_tela(idx: np.ndarray, etqs, pz: dict, labs: np.ndarray,
+                     lab_ref, umbrales) -> np.ndarray:
+    """«Qué pesa más: la tela». Claves, de más a menos importante:
+    estructura dura (no se cambia un pantalón largo por una bermuda), misma
+    tela (0), tela desconocida (1), otra tela (2); después franja de color si
+    se ha leído, estructura blanda y el parecido. Lo elige el usuario: no es
+    el orden por defecto, que es el medido («estructura»)."""
+    from paginas import color, etiquetas
+    ref = _tela(pz)
+    tela = np.array([1 if ref is None or _tela(etqs[i]) is None
+                     else (0 if _tela(etqs[i]) == ref else 2) for i in idx], dtype=int)
+    franja = np.zeros(len(idx), dtype=int)
+    if lab_ref is not None and umbrales:
+        t1, t2 = umbrales
+        de = np.full(len(idx), np.inf)
+        ok = np.all(np.isfinite(labs[idx]), axis=1)
+        if ok.any():
+            de[ok] = color.delta_cmc(lab_ref, labs[idx][ok])
+        franja = np.where(de <= t1, 0, np.where(de <= t2, 1, 2))
+    if pz and pz.get("color"):
+        franja = np.minimum(franja, _franja_nombres(idx, etqs, pz))
+    niv = np.array([etiquetas.niveles_prioridad(pz, etqs[i]) for i in idx],
+                   dtype=int).reshape(-1, 2)
+    return idx[np.lexsort((np.arange(len(idx)), niv[:, 1], franja, tela, niv[:, 0]))]
+
+
+PRIORIDADES_USUARIO = {"parecido": "Parecido", "color": "Color", "tela": "Tela"}
 
 
 def describir(pz: dict) -> str:
@@ -458,7 +524,7 @@ def _mini(r, puesto: int) -> str:
 
 def html_columna(posicion: str, filas: list, uri_recorte: str | None,
                  color_leido=None, aviso: str | None = None,
-                 titulo: str | None = None) -> str:
+                 titulo: str | None = None, nota: str | None = None) -> str:
     """Una posición: la prenda principal, dos parecidas y «Ver más».
 
     `filas` son las prendas de esa posición ya ordenadas de más a menos
@@ -495,6 +561,7 @@ def html_columna(posicion: str, filas: list, uri_recorte: str | None,
         f'{inserto}</div>',
         f'<p class="nom">{_html.escape(nombre(r0.get("categoria")))}</p>',
         f'<p class="det">{_html.escape(det) or "&nbsp;"}</p>',
+        (f'<p class="nota-col">{_html.escape(nota)}</p>' if nota else ''),
     ]
     if alt:
         partes.append('<p class="rot sub-alt">También se parecen</p><div class="dos">'

@@ -126,6 +126,50 @@ check("la sudadera guardada «arriba» compite encima", bool(m[1]) and bool(m[3]
 check("la inferida se describe como tal",
       busqueda.describir(e.pieza(c, "arriba")).startswith("algo debajo"))
 
+print("\n=== 7. Lo declarado manda y orden por tela ===")
+ia = {"posicion": "arriba", "tipo": "camiseta", "color": "rosa", "tejido": "algodon",
+      "manga": "larga", "largo": "no_aplica"}
+ef = e.efectivas(ia, "Sudadera", "arriba")
+check("la categoría pisa el tipo de la IA", ef["tipo"] == "sudadera" and ia["tipo"] == "camiseta")
+check("tejido y color declarados, si son de la lista",
+      e.efectivas(ia, "camiseta", tejido="Punto", color="Azul marino")["tejido"] == "punto"
+      and e.efectivas(ia, "camiseta", color="Azul marino")["color"] == "azul marino")
+check("texto libre que no encaja no pisa", e.efectivas(ia, "camiseta", tejido="mezcla rara")["tejido"] == "algodon")
+check("sin IA, la categoría da el tipo", e.efectivas(None, "jogger", "abajo")["tipo"] == "jogger")
+check("sin IA y categoría propia, nada", e.efectivas(None, "sobrecamisa", "encima") is None)
+# Foto: pantalón largo de algodón. Armario (ya por parecido): 0 vaquero, 1 pantalón algodón,
+# 2 bermuda algodón, 3 pantalón sin tejido conocido.
+PZ = {"tipo": "pantalon", "tejido": "algodon", "largo": "largo", "manga": "no_aplica"}
+et = [{"tipo": "vaquero", "tejido": "vaquero", "largo": "largo"},
+      {"tipo": "pantalon", "tejido": "algodon", "largo": "largo"},
+      {"tipo": "bermuda", "tejido": "algodon", "largo": "corto"},
+      {"tipo": "pantalon", "tejido": None, "largo": "largo"}]
+o = busqueda.ordenar_por_tela(np.arange(4), et, PZ, np.full((4, 3), np.nan), None, None)
+check("tela: el de algodón primero, el vaquero detrás del desconocido, la bermuda al final",
+      list(o) == [1, 3, 0, 2], f"{list(o)}")
+
+print("\n=== 8. Color con negros: píxeles + nombre ===")
+# Caso real: negro de estudio (L* 5) contra vaquero negro de casa (L* 13): la
+# ΔE CMC los separa. 0 = cargo marrón (más parecido), 1 = vaquero negro.
+PZn = {"tipo": "pantalon", "color": "negro", "largo": "largo", "manga": "no_aplica"}
+etn = [{"tipo": "pantalon", "color": "marron", "largo": "largo"},
+       {"tipo": "vaquero", "color": "negro", "largo": "largo"}]
+labsn = np.array([[35, 6, 12], [13, 2, -4]], float)
+solo_px = busqueda.ordenar_por_prioridades(np.arange(2), etn, PZn, labsn,
+                                           np.array([5., 0, 0]), (4.52, 9.05))
+con = busqueda.ordenar_por_prioridades(np.arange(2), etn, PZn, labsn,
+                                       np.array([5., 0, 0]), (4.52, 9.05), con_nombres=True)
+check("solo píxeles: el fallo visto en uso (sale el marrón)", int(solo_px[0]) == 0)
+check("con el nombre: sale el vaquero negro", int(con[0]) == 1)
+
+print("\n=== 9. Una columna no recibe prendas de otra parte del cuerpo ===")
+pos9 = np.array(["arriba", "arriba", "abajo"])
+et9 = [{"tipo": "camiseta"}, {"tipo": "sudadera"}, {"tipo": "vaquero"}]
+m = busqueda.candidatos(pos9, et9, "abajo", {"tipo": "camiseta"})
+check("abajo con la pieza de arriba: ninguna camiseta", list(m) == [False, False, True], f"{list(m)}")
+m = busqueda.candidatos(pos9, et9, "arriba", {"tipo": "vaquero"})
+check("arriba con la pieza de abajo: ningún pantalón", list(m) == [True, True, False], f"{list(m)}")
+
 print()
 if fallos:
     print(f"FALLAN {len(fallos)}: {fallos}")

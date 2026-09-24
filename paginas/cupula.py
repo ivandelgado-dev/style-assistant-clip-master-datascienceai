@@ -191,7 +191,9 @@ def html(malla: list, rellenar: list, alto: int = 520) -> str:
     const hechos = Math.floor(avance * RELLENAR.length);
 
     const cx = W / 2, cy = H * 1.05;
-    const R = Math.min(W * 0.45, H * 1.02);
+    // 0.90 y no 1.02: con 1.02 la perspectiva subía el polo de la cúpula
+    // por encima del borde del lienzo y se veía cortada por arriba.
+    const R = Math.min(W * 0.45, H * 0.90);
     const f = R * 4.0;
 
     const objetivo = raton ? 0.00035 : 0.0011;

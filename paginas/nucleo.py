@@ -340,6 +340,11 @@ def armario_usuario(usuario_id: int):
         "id", "categoria", "posicion", "foto", "foto_b", "talla", "color",
         "corte", "tejido", "notas", "origen", "ref", "creado", "color_l",
         "color_a", "color_b", "etiquetas"])
+    # Etiquetas efectivas: las de la IA corregidas por lo que dijo el usuario
+    # (categoría, tejido, color). Ver etiquetas.efectivas.
+    from paginas import etiquetas as _etq
+    d["etiquetas"] = [_etq.efectivas(f["etiquetas"], f["categoria"], f["posicion"],
+                                     f["tejido"], f["color"]) for f in filas]
     d["fichero"] = d["foto"]
     d["fichero_b"] = d["foto_b"].fillna("")
     d["prenda_id"] = [r if r else f"#{i}" for r, i in zip(d["ref"], d["id"])]

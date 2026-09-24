@@ -530,7 +530,12 @@ CSS = """
   /* En el armario la descripción («manga corta») es lo que distingue dos
      prendas de la misma categoría: se ve siempre, no solo al pasar. */
   .ficha.fija .desc{opacity:1;transform:none;white-space:nowrap;overflow:hidden;
-                    text-overflow:ellipsis;}
+                    text-overflow:ellipsis;
+                    /* Interlineado relativo y un poco de aire abajo: con uno fijo
+                       de 15 px, si Streamlit agranda la letra, overflow:hidden
+                       cortaba los rabos de la g, la p y la y. */
+                    line-height:1.45 !important;padding-bottom:2px;}
+  .ficha.fija .nom{line-height:1.3 !important;}
   .ficha.fija .pie{margin-top:7px;}
   /* Sin segunda toma: al pasar, la foto se queda (la regla general la oculta). */
   .ficha.fija:hover .marco img.a{opacity:1;}
@@ -653,5 +658,128 @@ CSS = """
   /* Vista previa en el diálogo de subida: que no ocupe toda la pantalla. */
   [data-testid="stDialog"] div[data-testid="stImage"] img{
     max-height:260px;width:auto !important;max-width:100%;object-fit:contain;}
+
+  /* ---- outfits por estilo: carrusel de looks ------------------------------
+     Tarjetas que se deslizan en horizontal (scroll-snap, sin JS), con la
+     etiqueta del estilo arriba y una ficha blanca abajo, como la referencia
+     que trajo Iván. Los bordes se desvanecen con una máscara para que se vea
+     que hay más. El leve zoom al centrar es decorativo: solo donde el
+     navegador lo hace en CSS (animation-timeline) y si no se ha pedido
+     reducir el movimiento; sin él, el carrusel funciona igual. */
+  .carrusel{margin-top:14px;}
+  .carrusel .riel{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;
+       padding:6px 48px 18px 2px;scrollbar-width:thin;
+       -webkit-mask-image:linear-gradient(to right,#000 0,#000 calc(100% - 64px),transparent 100%);
+       mask-image:linear-gradient(to right,#000 0,#000 calc(100% - 64px),transparent 100%);}
+  .lk{flex:0 0 250px;aspect-ratio:3/4.7;position:relative;border-radius:18px;
+       overflow:hidden;background:var(--plate);scroll-snap-align:start;}
+  .lk .lienzo{position:absolute;inset:0;display:grid;gap:8px;
+       grid-template-rows:1fr 1fr;padding:48px 14px 124px 14px;}
+  .lk.tres .lienzo{grid-template-columns:1fr 1fr;}
+  .lk.tres .lienzo .abajo{grid-column:1 / span 2;}
+  .lk .lienzo div{min-height:0;display:flex;align-items:center;justify-content:center;}
+  .lk .lienzo img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;display:block;}
+  .lk .chip{position:absolute;top:12px;left:12px;z-index:2;padding:7px 11px;border-radius:11px;
+       background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+       font-size:10px;letter-spacing:.9px;text-transform:uppercase;font-weight:700;color:var(--ink);}
+  .lk .num{position:absolute;top:16px;right:16px;z-index:2;font-size:10px;color:var(--faint);
+       font-family:Menlo,Consolas,monospace;}
+  .lk .ficha-look{position:absolute;left:10px;right:10px;bottom:10px;z-index:2;background:#fff;
+       border-radius:13px;padding:12px 14px 12px 14px;}
+  .ficha-look .t{font-size:13.5px;font-weight:600;margin:0;color:var(--ink);line-height:18px;}
+  .ficha-look .d{font-size:11.5px;color:var(--muted);margin:3px 0 0 0;line-height:16px;}
+  .ficha-look .w{display:flex;align-items:center;gap:4px;margin-top:8px;font-size:10px;
+       color:var(--faint);line-height:14px;}
+  .ficha-look .w i{width:13px;height:13px;border-radius:3px;display:inline-block;
+       box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);}
+  .ficha-look .w span{margin-left:4px;}
+  @supports ((animation-timeline: view()) and (animation-range: entry)){
+    @media (prefers-reduced-motion: no-preference){
+      /* Solo al ENTRAR por la derecha: las que ya están a la vista, enteras. */
+      .lk{animation:akin-lk linear both;animation-timeline:view(inline);
+            animation-range:entry 0% entry 100%;}
+      @keyframes akin-lk{from{opacity:.45;transform:scale(.94);}
+                           to{opacity:1;transform:none;}}
+    }
+  }
+  /* Cinta de Mi armario: las mismas tarjetas, en bucle (.cinta/.pista).
+     Una sola prenda por tarjeta; más estrecha que la de los looks. La
+     animación de entrada de .lk no aplica aquí: la cinta ya se mueve. */
+  .cinta-armario{padding:4px 0 8px 0;}
+  .cinta-armario .pista{gap:16px;animation-duration:80s;}
+  .lk.cintalk{flex:0 0 220px;aspect-ratio:3/4.2;animation:none;}
+  .lk .lienzo.uno{grid-template-rows:1fr;padding:50px 14px 92px 14px;}
+  /* Las opciones (estilos, colores) bajan de línea en vez de cortarse:
+     Streamlit las pone en una fila con scroll oculto. */
+  [data-testid="stButtonGroup"] > div{flex-wrap:wrap !important;overflow:visible !important;
+       row-gap:6px;}
+  .nota-col{font-size:11px;line-height:16px;color:var(--burdeos);margin:6px 0 0 0;}
+  /* ---- Buscar: «Desde una foto» / «Por estilo» como pestañas -----------
+     Dos pantallas, no dos opciones de un filtro: texto en mayúsculas, sin
+     cajas, la activa en tinta y subrayada, sobre una línea fina a todo el
+     ancho. Es el lenguaje de la barra de navegación. */
+  .st-key-b_modo{border-bottom:1px solid var(--line);margin-bottom:6px;}
+  .st-key-b_modo [data-testid="stButtonGroup"] > div{gap:34px !important;}
+  .st-key-b_modo [data-testid="stButtonGroup"] button{
+       border:none !important;border-bottom:2px solid transparent !important;
+       background:transparent !important;padding:10px 0 9px 0 !important;
+       min-height:0 !important;margin-bottom:-1px;}
+  .st-key-b_modo [data-testid="stButtonGroup"] button p{
+       font-size:12.5px !important;letter-spacing:1.4px !important;
+       text-transform:uppercase;color:var(--muted) !important;}
+  .st-key-b_modo [data-testid="stButtonGroup"] button:hover p{color:var(--ink) !important;}
+  .st-key-b_modo [data-testid="stButtonGroup"] button[aria-checked="true"],
+  .st-key-b_modo [data-testid="stButtonGroup"] button[aria-pressed="true"]{
+       background:transparent !important;border-bottom-color:var(--ink) !important;}
+  .st-key-b_modo [data-testid="stButtonGroup"] button[aria-checked="true"] p,
+  .st-key-b_modo [data-testid="stButtonGroup"] button[aria-pressed="true"] p{
+       color:var(--ink) !important;font-weight:700;}
+  /* ---- subir la foto: recuadro grande para arrastrar ---------------------
+     Solo mientras no hay foto; con foto, vuelve a ser la ficha del archivo. */
+  .st-key-b_foto [data-testid="stFileUploaderDropzone"]:not(:has([data-testid="stFileChips"])){
+       min-height:170px;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:10px;border:1.5px dashed var(--line2, #CFC3B1);
+       background:var(--plate);border-radius:10px;padding:22px 16px;text-align:center;
+       transition:border-color .2s ease, background .2s ease;}
+  .st-key-b_foto [data-testid="stFileUploaderDropzone"]:not(:has([data-testid="stFileChips"])):hover{
+       border-color:var(--ink);background:var(--base);}
+  .st-key-b_foto [data-testid="stFileUploaderDropzone"]:not(:has([data-testid="stFileChips"]))::before{
+       content:"Arrastra aquí la foto";font-size:14px;color:var(--ink);font-weight:600;}
+  .st-key-b_foto [data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p{
+       font-size:0 !important;}
+  .st-key-b_foto [data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p::after{
+       content:"Elegir foto";font-size:12.5px;}
+  .st-key-b_foto [data-testid="stFileUploaderDropzoneInstructions"] span{font-size:0 !important;}
+  .st-key-b_foto [data-testid="stFileUploaderDropzoneInstructions"] span::after{
+       content:"o pulsa el botón · JPG, PNG o WEBP";font-size:11.5px;color:var(--faint);}
+  /* La foto de referencia sin el «pantalla completa» de Streamlit (se amplía
+     con el botón propio, ver vistas._ampliar). */
+  div[data-testid="stColumn"]:has(.panel-busqueda) [data-testid="stElementToolbar"]{display:none;}
+  /* Diálogo «Ampliar la foto»: sin caja. Fondo oscurecido, la foto sola en
+     el centro con las esquinas redondeadas, y la X en blanco. */
+  [data-testid="stDialog"]:has(.amplia){background:rgba(24,22,20,.78) !important;}
+  /* La caja se ajusta a la foto: así la X queda justo encima de su esquina
+     superior derecha, fuera de la imagen. */
+  [data-testid="stDialog"]:has(.amplia) > div{background:transparent !important;
+       box-shadow:none !important;border:none !important;
+       width:fit-content !important;min-width:0 !important;max-width:94vw !important;}
+  [data-testid="stDialog"]:has(.amplia) h2{visibility:hidden;}
+  [data-testid="stDialog"]:has(.amplia) button[aria-label="Close"]{color:#fff !important;}
+  .amplia{display:flex;justify-content:center;align-items:center;}
+  .amplia img{max-height:82vh;max-width:100%;width:auto;height:auto;display:block;
+       border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.45);}
+  /* Foto de referencia: botón de ampliar dentro de la foto, arriba a la
+     derecha, visible al pasar el ratón (y siempre con el teclado). */
+  .st-key-b_fotoref{position:relative;width:fit-content !important;max-width:100%;}
+  .st-key-b_fotoref [class*="st-key-b_ampliar_"]{position:absolute;top:10px;right:10px;
+       z-index:3;width:auto !important;opacity:0;transition:opacity .2s ease;}
+  .st-key-b_fotoref:hover [class*="st-key-b_ampliar_"],
+  .st-key-b_fotoref [class*="st-key-b_ampliar_"]:focus-within{opacity:1;}
+  .st-key-b_fotoref [class*="st-key-b_ampliar_"] button{min-height:0 !important;
+       padding:6px 7px !important;border-radius:8px !important;border:none !important;
+       background:rgba(255,255,255,.85) !important;color:var(--ink) !important;
+       box-shadow:0 1px 4px rgba(0,0,0,.15);}
+  .st-key-b_fotoref [class*="st-key-b_ampliar_"] button:hover{background:#fff !important;}
+  .falta{margin-top:18px;font-size:12.5px;line-height:19px;color:var(--muted);max-width:64ch;}
 </style>
 """
