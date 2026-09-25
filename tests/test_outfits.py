@@ -138,6 +138,87 @@ check("y todos cumplen el contraste bajo",
 check("no quita outfits: mismos conjuntos posibles",
       len(con["outfits"]) == len(sin["outfits"]))
 
+print("\n=== 6c. Partir de una prenda ===")
+jog = P(11, "abajo", "jogger", "gris", tejido="punto")
+jog["informal"] = True
+pr3 = prendas + [jog]
+v = outfits.encaje(jog, "business_casual")
+check("jogger en Business Casual: no encaja, con razón", v["nivel"] == 0 and v["razones"])
+check("y dice dónde sí", "athleisure" in v["alternativas"] and "streetwear" in v["alternativas"])
+check("chino en Smart Casual: encaja", outfits.encaje(prendas[5], "smart_casual")["nivel"] == 2)
+r = outfits.generar(pr3, "casual", ancla=4)
+check("con prenda de partida, sale en todos", r["outfits"]
+      and all(o["prendas"]["abajo"] == 4 for o in r["outfits"]))
+r = outfits.generar(pr3, "business_casual", ancla=11)
+check("si no encaja, no se inventa", not r["outfits"])
+r = outfits.generar(pr3, "business_casual", ancla=11, forzar=True)
+check("forzada: se monta igual y la lleva", r["outfits"]
+      and all(o["prendas"]["abajo"] == 11 for o in r["outfits"]))
+check("encima como prenda de partida: sale encima",
+      all(o["prendas"].get("encima") == 7 for o in outfits.generar(prendas, "rocker", ancla=7)["outfits"]))
+a0 = outfits.generar(prendas, "casual")
+a1 = outfits.generar(prendas, "casual", semilla=1)
+a1b = outfits.generar(prendas, "casual", semilla=1)
+check("otra tanda: misma semilla, mismo resultado", a1 == a1b)
+check("otra tanda: cambia algo", [o["prendas"] for o in a0["outfits"]] != [o["prendas"] for o in a1["outfits"]])
+
+# Camisa de béisbol (visto en uso): por tipo es camisa, pero no es de oficina.
+check("béisbol se detecta en la descripción",
+      outfits._informal("camisa", {"descripcion": "Camisa de béisbol negra"}, "") == "de béisbol")
+bb = dict(P(12, "arriba", "camisa", "negro", tejido="sintetico"), informal="de béisbol")
+check("camisa de béisbol: ni Business Casual ni Preppy",
+      outfits.encaje(bb, "business_casual")["nivel"] == 0
+      and outfits.encaje(bb, "preppy")["nivel"] == 0
+      and "béisbol" in outfits.encaje(bb, "business_casual")["razones"][0])
+check("camisa de béisbol: sí Casual y Streetwear",
+      outfits.encaje(bb, "casual")["nivel"] and outfits.encaje(bb, "streetwear")["nivel"])
+
+print("\n=== 6d. Formalidad y capas ===")
+F = outfits.formalidad
+check("camisa de béisbol: 2", F("camisa", "rayas", None, None, "camisa de beisbol negra")[0] == 2)
+check("chino de vestir: 5", F("chino", "liso", None, "largo", "pantalon chino de vestir")[0] == 5)
+check("pantalón cargo: 2", F("pantalon", "liso", None, "largo", "pantalon cargo largo")[0] == 2)
+check("camisa de franela: 3", F("camisa", "cuadros", None, None, "camisa de franela")[0] == 3)
+check("«informal» no cuenta como «formal»", F("camisa", "liso", None, None, "camisa informal")[0] == 3)
+check("bermuda tipo chino: 3, nunca más", F("bermuda", "liso", None, "corto", "bermuda tipo chino de vestir")[0] == 3)
+check("jogger: 1", F("jogger", "liso", None, "largo", "")[0] == 1)
+bc = dict(P(13, "arriba", "camisa", "negro"), formalidad=2, formal_por="de béisbol")
+check("fuera de ventana: Business Casual lo dice con la formalidad",
+      "formalidad 2/5" in (outfits.encaje(bc, "business_casual")["razones"][0]))
+ch = dict(P(14, "abajo", "bermuda", "beige"), formalidad=3)
+check("Athleisure: bermuda de sastre no", outfits.encaje(ch, "athleisure")["nivel"] == 0)
+cam, blz, ber, vaq = P(0, "arriba", "camiseta", "blanco"), P(8, "encima", "blazer", "gris"), \
+    P(10, "abajo", "bermuda", "verde"), P(4, "abajo", "vaquero", "azul marino")
+check("americana con bermuda: no", not outfits.capas_ok(cam, blz, ber))
+check("americana con vaquero: sí", outfits.capas_ok(cam, blz, vaq))
+pol, sud = P(15, "arriba", "polo", "rojo"), P(3, "encima", "sudadera", "gris")
+check("sudadera encima de un polo: no", not outfits.capas_ok(pol, sud, vaq))
+cms = P(2, "arriba", "camisa", "azul marino")
+jcv = dict(P(16, "encima", "jersey", "beige"), cuello_alto=True)
+check("cuello vuelto sobre camisa: no", not outfits.capas_ok(cms, jcv, vaq))
+cmc = dict(cms, manga_corta=True)
+check("americana sobre camisa de manga corta: no", not outfits.capas_ok(cmc, blz, vaq))
+check("salto de formalidad > 2 en un look: no",
+      outfits.reglas_estilo("casual", [dict(cms, formalidad=5), dict(ber, formalidad=1)]) is None)
+
+print("\n=== 6e. Rasgos de la IA y lo declarado ===")
+check("rasgo cargo sin palabras: 2", F("pantalon", "liso", None, "largo", "", rasgos={"cargo": True})[0] == 2)
+check("rasgo de vestir: chino 5", F("chino", "liso", None, "largo", "", rasgos={"de_vestir": True})[0] == 5)
+check("rasgo fantasía: camisa 2", F("camisa", "liso", None, None, "", rasgos={"fantasia": True})[0] == 2)
+check("las notas mandan sobre los rasgos",
+      F("camisa", "liso", None, None, "", rasgos={"fantasia": True}, notas="camisa de vestir")[0] == 5)
+check("notas sin nada de formalidad no borran los rasgos",
+      F("camisa", "liso", None, None, "", rasgos={"fantasia": True}, notas="mi favorita")[0] == 2)
+check("notas que solo describen no tapan los rasgos",
+      F("jersey", "liso", None, None, "sudadera", rasgos={"deportiva": True},
+        notas="jersey de cuello alto con cremallera")[0] == 2)
+check("«casual» en las notas: manda lo declarado, sin rasgos",
+      F("camisa", "liso", None, None, "", rasgos={"de_vestir": True}, notas="camisa lisa casual")[0] == 4)
+check("rasgo deportiva solo: tope 2 (el 1 lo dan las palabras)",
+      F("cazadora", "liso", None, None, "cazadora bomber", rasgos={"deportiva": True})[0] == 2)
+check("logo discreto (rasgo): no es gráfico",
+      F("polo", "logo", None, None, "", rasgos={"logo_discreto": True})[0] == 3)
+
 print("\n=== 7. Valoraciones ===")
 tmp = pathlib.Path(tempfile.mkdtemp())
 BD = tmp / "u.db"

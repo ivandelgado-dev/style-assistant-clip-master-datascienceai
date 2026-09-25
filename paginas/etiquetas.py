@@ -566,3 +566,113 @@ def aplicar_ajuste(pz: dict | None, posicion: str, ajuste: dict) -> dict | None:
         if campo in ajuste:
             base[campo] = ajuste[campo]
     return base
+
+
+# ---------------------------------------------------------------------------
+# Rasgos de estilo (versión r1): lo que el tipo cerrado no dice
+# ---------------------------------------------------------------------------
+# Visto en uso: una camisa de béisbol es «camisa» por tipo y las reglas la
+# trataban como una de vestir. La descripción libre lo decía a veces; estos
+# rasgos se lo preguntan a la IA SIEMPRE, con respuesta cerrada (sí/no), sobre
+# la foto. Es una petición aparte: la versión e1 (tipo, color…) está
+# congelada porque es la de la evaluación, y no se toca.
+# La IA solo DESCRIBE la prenda; qué estilo le va lo deciden las reglas
+# (paginas/outfits.py). "formalidad_ia" se guarda para MEDIR la regla contra
+# ella, no se usa para decidir.
+VERSION_RASGOS = "r1"
+RASGOS = {
+    "deportiva": "ropa de deporte o de chándal: felpa de chándal, tejido técnico, franjas laterales",
+    "cargo": "bolsillos cargo (de parche, en los laterales de la pierna)",
+    "rota": "rotos o desgaste fuerte a propósito",
+    "capucha": "tiene capucha",
+    "grafico_grande": "gráfico, dibujo, letras o logo GRANDE y visible",
+    "logo_discreto": "solo un logo o texto pequeño o bordado",
+    "fantasia": "camisa o polo de fantasía: de béisbol, de bolos, hawaiana o de estampado tropical",
+    "rustica": "de trabajo o de campo: franela, lona, sobrecamisa, pana gruesa",
+    "de_vestir": "de sastre o de vestir: pantalón de pinzas o con raya, camisa de vestir, tejido fino",
+    "volumen": "corte muy ancho: baggy, wide leg, oversize",
+    "cuello_alto": "cuello vuelto, alto o perkins",
+    "manga_corta": "manga corta",
+    "sobrecamisa": "camisa gruesa pensada para llevar por fuera, como una chaqueta",
+}
+_ITEM_RASGOS = {
+    "type": "OBJECT",
+    "properties": {"imagen": {"type": "INTEGER"},
+                   **{k: {"type": "BOOLEAN"} for k in RASGOS},
+                   "formalidad": {"type": "INTEGER"}},
+    "required": ["imagen", *RASGOS, "formalidad"],
+}
+_LOTE_RASGOS = {"type": "OBJECT",
+                "properties": {"resultados": {"type": "ARRAY", "items": _ITEM_RASGOS}},
+                "required": ["resultados"]}
+INSTRUCCIONES_RASGOS = (
+    "Eres un etiquetador de ropa de hombre. En cada imagen hay UNA prenda. "
+    "Para cada rasgo responde true solo si se ve claramente en la foto:\n"
+    + "\n".join(f"- {k}: {v}" for k, v in RASGOS.items())
+    + "\n- formalidad: de 1 a 5 (1 deporte, 2 informal, 3 casual, 4 arreglado, "
+      "5 formal), según las guías de vestimenta habituales.\n"
+      "Devuelve {\"resultados\": [...]} con un elemento por imagen, en orden, "
+      "cada uno con su número en \"imagen\". Cada imagen es independiente.")
+
+
+def normalizar_rasgos(r: dict) -> dict:
+    """Solo booleanos de la lista y una formalidad 1-5; lo demás se descarta."""
+    f = r.get("formalidad")
+    return {**{k: bool(r.get(k)) for k in RASGOS},
+            "formalidad_ia": f if isinstance(f, int) and 1 <= f <= 5 else None,
+            "version": VERSION_RASGOS}
+
+
+def pedir_rasgos_lote(lote: list[bytes], modelo: str) -> list[dict | None]:
+    """UNA petición con varias fotos, SIN caché (la prueba de consistencia
+    necesita volver a preguntar lo ya preguntado)."""
+    r = gemini.generar_json(modelo, INSTRUCCIONES_RASGOS, lote, _LOTE_RASGOS, lado=768)
+    salida: list[dict | None] = [None] * len(lote)
+    for res in r.get("resultados", []):
+        k = res.get("imagen")
+        if isinstance(k, int) and 1 <= k <= len(lote):
+            salida[k - 1] = {**normalizar_rasgos(res), "modelo": modelo}
+    return salida
+
+
+def rasgos_en_cache(imagen: bytes) -> dict | None:
+    """Rasgos ya pedidos para esta foto (cualquier modelo), sin llamar a la API."""
+    pref = f"{hashlib.sha1(imagen).hexdigest()}|{VERSION_RASGOS}|"
+    hits = [v for k, v in _leer_cache().items() if k.startswith(pref)]
+    return hits[-1] if hits else None
+
+
+def rasgos_lote(imagenes: list[bytes], modelo: str | None = None, tam: int = 10,
+                aviso=print) -> int:
+    """Pide los rasgos de las fotos que no los tienen, `tam` por petición, y los
+    guarda en la caché con la huella de cada foto. Devuelve cuántas nuevas."""
+    modelo = modelo or gemini.elegir_modelo()
+    pend = [im for im in dict.fromkeys(imagenes) if rasgos_en_cache(im) is None]
+    hechas = 0
+    for i in range(0, len(pend), tam):
+        lote = pend[i:i + tam]
+        try:
+            res = pedir_rasgos_lote(lote, modelo)
+        except gemini.CuotaAgotada:
+            aviso(f"  cuota diaria de {modelo} agotada: faltan {len(pend) - i}")
+            break
+        except gemini.ErrorGemini as e:
+            aviso(f"  lote {i // tam + 1}: {gemini.resumen_error(e)}; se sigue")
+            continue
+        c = _leer_cache()
+        for img, r in zip(lote, res):
+            if r is not None:
+                c[_clave(img, modelo, VERSION_RASGOS)] = r
+                hechas += 1
+        _guardar_cache(c)
+        aviso(f"  lote {i // tam + 1}/{-(-len(pend) // tam)}: {hechas} con rasgos")
+    return hechas
+
+
+def analizar_rasgos(imagen: bytes, modelo: str | None = None) -> dict | None:
+    """Rasgos de UNA foto (al subir una prenda), con caché."""
+    hit = rasgos_en_cache(imagen)
+    if hit:
+        return hit
+    rasgos_lote([imagen], modelo, aviso=lambda *_: None)
+    return rasgos_en_cache(imagen)

@@ -108,9 +108,9 @@ def inicio():
     st.markdown(
         '<div class="heroe">'
         '<h1 class="revela">Ya lo tienes.<br>Solo hay que encontrarlo.</h1>'
-        '<p>Subes la foto de una prenda que has visto y Akin ordena tu armario '
-        'por parecido a ella. Por el conjunto, o por una sola dimensión: el '
-        'corte, la textura o el tejido.</p></div>', unsafe_allow_html=True)
+        '<p>Subes la foto de un look que te gusta y Akin busca en tu armario '
+        'lo más parecido, pieza a pieza. O eliges un estilo y te monta '
+        'conjuntos con lo que ya tienes.</p></div>', unsafe_allow_html=True)
 
     # El boton estaba en la PRIMERA columna de las tres, no en la del medio.
     _, c, _ = st.columns([2, 1.2, 2])
@@ -161,23 +161,28 @@ def inicio():
                 '<div class="filete revela" style="margin-bottom:14px;"></div>'
                 '<p class="rot-f revela" style="margin-bottom:18px;">Cómo '
                 'funciona</p>' +
-                _tarjetas(3, [
+                _tarjetas(4, [
                     '<div class="n">01</div><h3>Digitalizas el armario</h3>'
-                    '<p>Dos fotografías por prenda, extendida sobre una '
-                    'superficie lisa. El protocolo de captura está fijado y '
-                    'documentado para que las condiciones no varíen entre '
-                    'prendas.</p>',
+                    '<p>Una foto por prenda, extendida sobre una superficie '
+                    'lisa. Una IA de visión la describe —tipo, color, '
+                    'tejido— y tú corriges lo que haga falta: lo que '
+                    'declaras manda.</p>',
                     '<div class="n">02</div><h3>Se proyecta el espacio</h3>'
                     '<p>CLIP ViT-B/32 congelado convierte cada foto en un '
                     'vector de 512 dimensiones. Encima, una proyección '
                     'supervisada de 128 dimensiones entrenada sobre '
                     'DeepFashion reordena ese espacio para que la distancia '
                     'signifique parecido de prenda.</p>',
-                    '<div class="n">03</div><h3>Se ordena por distancia</h3>'
-                    '<p>La referencia pasa por la misma proyección y las '
-                    'prendas se ordenan por similitud coseno. Una distancia '
-                    'entre vectores: la misma consulta devuelve siempre el '
-                    'mismo orden.</p>']),
+                    '<div class="n">03</div><h3>Desde una foto</h3>'
+                    '<p>La foto se corta por zonas y cada una se compara solo '
+                    'con tus prendas de esa posición. Primero lo que es la '
+                    'misma clase de prenda; después, lo más parecido, o lo '
+                    'del mismo color o tela si lo pides.</p>',
+                    '<div class="n">04</div><h3>Por estilo</h3>'
+                    '<p>Eliges un estilo y, si quieres, un color. Reglas de '
+                    'estilista escritas en el código montan los conjuntos, '
+                    'con las paletas del diccionario de colores de Sanzo '
+                    'Wada.</p>']),
                 unsafe_allow_html=True)
 
     # Franja oscura: corta el beige a media pagina y da el unico momento de
@@ -187,7 +192,7 @@ def inicio():
     # gastadas en el mismo argumento. Aqui va la promesa del producto, que no
     # se repite en ninguna otra pagina.
     st.markdown(_franja(
-        'No te dice qué ponerte.<br>Te dice <em>qué tienes</em>.',
+        'No te vende nada.<br>Te enseña <em>lo que ya tienes</em>.',
         'La mayoría de los sistemas de moda existen para venderte algo. Este '
         'empieza por el armario que ya has pagado, y solo mira fuera cuando '
         'dentro no hay nada que se parezca.'), unsafe_allow_html=True)
@@ -204,11 +209,11 @@ def inicio():
                 'proyecto</p>'
                 '<div class="aviso revela" style="max-width:66ch;">'
                 '<p class="cuerpo revela">Primera versión. Es el prototipo de un '
-                'Trabajo de Fin de Máster, no un producto: se evalúa la '
-                'calidad del ordenamiento, y las partes que no afectan a esa '
-                'medida están deliberadamente fuera. La página de '
-                '<b>resultados y límites</b> detalla qué funciona, con cuánta '
-                'confianza, y qué no se ha construido.</p></div>',
+                'Trabajo de Fin de Máster, no un producto. Lo que se ha medido '
+                'es el orden de la búsqueda desde una foto; los conjuntos por '
+                'estilo salen de reglas escritas y todavía no tienen medida. '
+                'La página de <b>resultados y límites</b> detalla qué funciona, '
+                'con cuánta confianza, y qué no se ha construido.</p></div>',
                 unsafe_allow_html=True)
 
     st.markdown(_nav(0),
@@ -234,25 +239,38 @@ def sistema():
                 '<div style="height:34px;"></div>', unsafe_allow_html=True)
 
     st.markdown('<p class="rot-f revela" style="margin-bottom:8px;">La tubería</p>' +
-                _tarjetas(4, [
-                    '<div class="n">01</div><h3>Captura</h3><p>Dos tomas por '
-                    'prenda, extendida, sobre el mismo fondo y con la misma '
-                    'luz. La segunda toma no es un duplicado: sirve para medir '
-                    'el suelo de ruido del sistema.</p>',
-                    '<div class="n">02</div><h3>Codificación</h3><p>CLIP '
+                _tarjetas(3, [
+                    '<div class="n">01</div><h3>Captura</h3><p>Una foto por '
+                    'prenda, extendida sobre un fondo liso. Las 118 prendas '
+                    'del autor tienen dos tomas: la segunda no es un '
+                    'duplicado, sirve para medir el suelo de ruido del '
+                    'sistema.</p>',
+                    '<div class="n">02</div><h3>Descripción</h3><p>Gemini '
+                    'describe cada foto con listas cerradas: tipo, manga, '
+                    'largo, color, estampado y tejido. Medido contra las '
+                    'anotaciones del autor: tipo 105/118, manga 25/27. Lo '
+                    'que declara el usuario corrige a la IA.</p>',
+                    '<div class="n">03</div><h3>Codificación</h3><p>CLIP '
                     'ViT-B/32 <b>congelado</b>. No se reentrena el backbone: '
                     'exige semanas de cómputo y más datos de los que hay, y '
                     'sin congelarlo no se puede atribuir la mejora a la '
                     'proyección.</p>',
-                    '<div class="n">03</div><h3>Proyección</h3><p>Una cabeza '
+                    '<div class="n">04</div><h3>Proyección</h3><p>Una cabeza '
                     'ligera de 512 a 128 dimensiones, entrenada con pérdida '
                     'contrastiva sobre las etiquetas de DeepFashion. Se '
                     'entrenaron dos variantes: una conjunta y tres '
                     'específicas por atributo.</p>',
-                    '<div class="n">04</div><h3>Recuperación</h3><p>Producto '
-                    'escalar entre vectores normalizados sobre unos 44.000 '
-                    'elementos. Cabe en memoria y no necesita índice '
-                    'aproximado a esta escala.</p>']),
+                    '<div class="n">05</div><h3>Búsqueda desde una foto</h3>'
+                    '<p>La foto se corta por zonas y por capas (lo de debajo, '
+                    'lo de encima). Cada zona se compara con las prendas de su '
+                    'posición: primero la misma clase de prenda, manga y '
+                    'largo; después el parecido, o el color o la tela si el '
+                    'usuario lo elige.</p>',
+                    '<div class="n">06</div><h3>Conjuntos por estilo</h3>'
+                    '<p>Reglas explícitas por estilo (qué prendas, cuántos '
+                    'colores, qué estampados) y las 348 paletas del '
+                    'diccionario de Sanzo Wada. Mismo armario, mismo '
+                    'resultado; cada conjunto lleva sus razones.</p>']),
                 unsafe_allow_html=True)
 
     st.markdown('<div style="height:48px;"></div>'
@@ -263,25 +281,28 @@ def sistema():
                     'cualquier mejora puede venir de ahí. Congelándolo, la '
                     'diferencia entre condiciones solo puede atribuirse a la '
                     'proyección, que es lo que se quiere medir.</p>',
-                    '<h4>Partición disjunta</h4><p>Los conjuntos de Polyvore '
-                    'se parten de forma que ninguna prenda aparezca en dos '
-                    'particiones. La partición no disjunta permite memorizar '
-                    'prendas concretas e infla los resultados.</p>',
-                    '<h4>Sin base de datos todavía</h4><p>El diseño en '
-                    'PostgreSQL con pgvector está documentado y defendido en '
-                    'la entrega 3. Lo que cambia es el orden de construcción: '
-                    'levantarla antes de tener una métrica no produce ninguna '
-                    'métrica.</p>']),
+                    '<h4>La regla, antes que el número</h4><p>Cada cambio en '
+                    'el orden de la búsqueda se midió con una regla escrita '
+                    'antes de ver el resultado. Dos propuestas no la pasaron '
+                    'y se quedaron fuera, aunque en uso parecían mejores; la '
+                    'última se probó con fotos nuevas, recogidas después.</p>',
+                    '<h4>SQLite y no pgvector</h4><p>Cada usuario busca en '
+                    'su armario, del orden de cien prendas: la búsqueda '
+                    'exacta tarda milisegundos y un índice aproximado no '
+                    'mejora nada medible. El esquema es el de la entrega 3 y '
+                    'se puede llevar a PostgreSQL sin cambiarlo.</p>']),
                 unsafe_allow_html=True)
 
     st.markdown(_franja(
-        'Un modelo de lenguaje puede explicar un resultado.<br>'
-        'Nunca <em>decidirlo</em>.',
-        'Puede traducir una petición en lenguaje natural a restricciones, y '
-        'puede redactar por qué salió una prenda. Lo que no hace en ningún '
-        'punto es elegir cuál sale ni en qué orden: esa decisión tiene que ser '
-        'reproducible y evaluable, y dos ejecuciones de un LLM pueden diferir '
-        'sin que haya métrica que las compare.'), unsafe_allow_html=True)
+        'La IA describe y traduce.<br>'
+        'Nunca <em>decide</em>.',
+        'Gemini describe las fotos y traduce «una cena informal, algo en '
+        'azul» a las opciones de la pantalla, que el usuario ve y puede '
+        'cambiar. Lo que no hace en ningún punto es elegir qué prenda sale ni '
+        'en qué orden: eso lo deciden los vectores y unas reglas escritas, '
+        'porque tiene que ser reproducible y evaluable, y dos respuestas de un '
+        'modelo de lenguaje pueden diferir sin que haya métrica que las '
+        'compare.'), unsafe_allow_html=True)
 
     st.markdown('<div style="height:48px;"></div>'
                 '<p class="rot-f revela" style="margin-bottom:10px;">Herramientas'
@@ -290,7 +311,8 @@ def sistema():
     with a:
         for k, v in [("Backbone", "CLIP ViT-B/32 · HuggingFace"),
                      ("Entrenamiento", "PyTorch · pérdida contrastiva"),
-                     ("Datos", "pandas · NumPy · parquet"),
+                     ("Descripción", "Gemini 3.5 Flash-Lite · API"),
+                     ("Datos", "pandas · NumPy · SQLite"),
                      ("Evaluación", "scikit-learn · bootstrap propio")]:
             st.markdown(f'<div class="dato revela"><span>{k}</span><span>{v}</span>'
                         f'</div>', unsafe_allow_html=True)
@@ -301,7 +323,7 @@ def sistema():
         # proyecto. Esto es la pila técnica y nada más.
         for k, v in [("Interfaz", "Streamlit"),
                      ("Servicio previsto", "FastAPI"),
-                     ("Contenedores", "Docker"),
+                     ("Contenedores", "Docker (previsto)"),
                      ("Entorno", "Python 3.11 · entorno virtual")]:
             st.markdown(f'<div class="dato revela"><span>{k}</span><span>{v}</span>'
                         f'</div>', unsafe_allow_html=True)
@@ -360,6 +382,31 @@ def resultados():
             unsafe_allow_html=True)
 
     st.markdown('<div style="height:44px;"></div>'
+                '<p class="rot-f revela" style="margin-bottom:8px;">Buscar tu '
+                'prenda desde una foto de tienda</p>'
+                '<p class="cuerpo revela" style="max-width:64ch;'
+                'margin-bottom:14px;">Parejas reales de una tienda: la foto de '
+                'un modelo con la prenda puesta y la foto de producto de esa '
+                'prenda, escondida entre las del autor. ¿Sale la primera? '
+                'Medido en dos tandas, la segunda con fotos recogidas después '
+                'de fijar la regla.</p>' +
+                _tarjetas(3, [
+                    '<h4>La proyección gana a CLIP plano</h4><p>Con fotos '
+                    'nuevas, 30 parejas y 172 prendas: la prenda exacta sale '
+                    '<b>primera 22 veces</b> frente a 19, y entre las tres '
+                    'primeras 27 frente a 23. El azar acertaría el 2 %. En la '
+                    'primera tanda, 17 frente a 16 y 22 frente a 18.</p>',
+                    '<h4>El color, como opción</h4><p>Ordenar primero por '
+                    'color empata con el orden por defecto: 41 frente a 40 '
+                    'aciertos sumando las dos tandas. Falla cuando el color se '
+                    'lee mal en la foto del modelo, sobre todo con negros. Por '
+                    'eso no va por defecto y el usuario lo elige.</p>',
+                    '<h4>El color de la IA no mejora</h4><p>Leer el color con '
+                    'Gemini en vez de con los píxeles se probó con parejas '
+                    'nuevas y una regla escrita antes: 20 aciertos frente a '
+                    '23. No entra. Un resultado negativo medido con el mismo '
+                    'cuidado que los positivos.</p>']) +
+                '<div style="height:44px;"></div>'
                 '<p class="rot-f revela" style="margin-bottom:8px;">El salto de '
                 'dominio</p>' +
                 _tarjetas(3, [
@@ -423,17 +470,22 @@ def resultados():
                 '<p class="rot-f revela" style="margin-bottom:8px;">Lo que el sistema '
                 'no hace</p>' +
                 _celdas("tres", [
-                    '<h4>No compone conjuntos</h4><p>Ordena prendas por '
-                    'parecido a una referencia. La compatibilidad entre prendas '
-                    'es otro problema y no está implementada.</p>',
+                    '<h4>Los conjuntos no están medidos</h4><p>«Por estilo» '
+                    'monta conjuntos con reglas de estilista, no con un modelo '
+                    'aprendido de compatibilidad. Nadie ha medido si aciertan: '
+                    'por eso se guarda cada «me lo pondría» y «no me '
+                    'convence».</p>',
                     '<h4>No dice si te favorece</h4><p>No hay modelo de '
-                    'adecuación corporal. No existen datos públicos, y uno '
-                    'entrenado sobre juicios estéticos de cuerpos aprendería '
-                    'sesgos corporales por construcción.</p>',
-                    '<h4>No da una probabilidad</h4><p>La barra de cada '
-                    'resultado es proximidad relativa dentro de esa lista. Las '
-                    'bandas calibradas se midieron sobre catálogo y no se '
-                    'aplican a estas fotos.</p>']),
+                    'adecuación corporal: no existen datos públicos, y uno '
+                    'entrenado sobre juicios estéticos aprendería sesgos por '
+                    'construcción. La altura, si la das, solo activa una regla '
+                    'de proporción que se ve y se apaga. El peso no se '
+                    'pide.</p>',
+                    '<h4>No lee bien todos los colores</h4><p>El color de la '
+                    'foto depende de la luz. Con negros y tonos muy oscuros la '
+                    'diferencia de color se dispara, y en la primera prueba 9 '
+                    'de 24 lecturas cayeron lejos. Por eso el orden por '
+                    'defecto no usa el color.</p>']),
                 unsafe_allow_html=True)
     st.markdown(_nav(2),
                 unsafe_allow_html=True)
@@ -458,32 +510,30 @@ def futuro():
                 unsafe_allow_html=True)
 
     for titulo, estado, texto in [
-        ("Compatibilidad entre prendas", "Diseñado · sin implementar",
-         "Un módulo entrenado sobre Polyvore con partición disjunta que "
-         "puntúe si dos prendas funcionan juntas. Métricas previstas: "
-         "precisión en «rellena el hueco» y AUC. Referencias externas sitúan "
-         "el estado del arte en torno al 55–62 % en esa tarea, cifras que "
-         "sirven para situar un resultado, no para prometerlo."),
+        ("Medir los conjuntos por estilo", "En marcha · recogiendo datos",
+         "Hoy los monta un conjunto de reglas escritas. Cada «me lo pondría» "
+         "y «no me convence» se guarda con el conjunto y el estilo pedido: con "
+         "suficientes valoraciones se podrá medir qué reglas aciertan y "
+         "ajustar sus pesos con datos, en vez de a ojo."),
+        ("Compatibilidad aprendida", "Diseñado · sin implementar",
+         "Sustituir las reglas por un módulo entrenado sobre Polyvore con "
+         "partición disjunta que puntúe si dos prendas funcionan juntas. "
+         "Métricas previstas: precisión en «rellena el hueco» y AUC. "
+         "Referencias externas sitúan el estado del arte en torno al 55–62 % "
+         "en esa tarea, cifras para situar un resultado, no para prometerlo."),
+        ("Decidir el color con más datos", "Siguiente medida",
+         "Ordenar primero por color empató con el orden por defecto en 54 "
+         "consultas. Hace falta un conjunto mayor —y otro con looks de varias "
+         "capas— para decidir sin ambigüedad si debe ir por defecto."),
         ("Catálogo comercial y enlace a producto", "Diseñado · sin implementar",
          "Cuando el armario no cubre una posición, recuperar del catálogo la "
          "prenda más próxima y enlazar al producto real. Se almacenarían "
          "embeddings, metadatos y URL. Nunca imágenes: la aplicación las "
          "cargaría desde el servidor de origen."),
-        ("Lenguaje natural como entrada", "Diseñado · sin implementar",
-         "Un modelo de lenguaje que traduzca «algo parecido pero más "
-         "abrigado» a restricciones sobre los metadatos. Seguiría sin decidir "
-         "el orden: filtra y explica, no ordena."),
-        ("Base de datos y servicio", "Diseñado · sin implementar",
-         "PostgreSQL con pgvector resuelve el filtrado relacional y la "
-         "búsqueda vectorial en una sola consulta, y FastAPI separa el núcleo "
-         "de la interfaz. El diseño está completo en la entrega 3; solo falta "
-         "levantarlo."),
-        ("Etiquetado asistido al subir", "Diseñado · sin implementar",
-         "Hoy cada usuario sube sus prendas y dice qué son; los detalles "
-         "(color, corte, tejido) los escribe a mano si quiere. Un modelo de "
-         "visión y lenguaje podría proponerlos al subir la foto. Propondría, "
-         "no decidiría: el usuario confirma, y la búsqueda sigue comparando "
-         "la foto."),
+        ("Servicio y base de datos compartida", "Diseñado · sin implementar",
+         "FastAPI para separar el núcleo de la interfaz, y PostgreSQL con "
+         "pgvector cuando haya muchos usuarios o un catálogo grande. El "
+         "esquema de la entrega 3 ya es el que usa la aplicación en SQLite."),
         ("Reducir el salto de dominio", "Línea de investigación abierta",
          "Es lo que este trabajo midió y no resolvió. Las vías razonables son "
          "aumentar los datos de entrenamiento con fotografía de prenda "
@@ -552,6 +602,10 @@ def sobre():
              "Licencia no declarada · riesgo documentado"),
             ("Armario propio · 118 prendas", "Test fuera de distribución",
              "Fotografías del autor"),
+            ("Parejas modelo / producto · 54", "Evaluación de la búsqueda",
+             "Fotos de una tienda · solo en local, no se redistribuyen"),
+            ("A Dictionary of Color Combinations", "Paletas de «Por estilo»",
+             "Sanzo Wada, 1933 · datos de mattdesl, MIT"),
         ]:
             # Antes esto eran dos bloques: la fila con su borde inferior y,
             # debajo, la licencia con margin-top NEGATIVO para acercarla. Ese
@@ -1335,9 +1389,9 @@ def pie(extra: str = ""):
              "AttributePrediction.html"),
             ("Polyvore Outfits", "https://github.com/xthan/polyvore-dataset"),
         ]),
-        ("Límites", [("Sin composición de conjuntos", None),
+        ("Límites", [("Conjuntos por reglas, sin medir", None),
                      ("Sin adecuación corporal", None),
-                     ("Sin etiquetado automático", None)]),
+                     ("Sin catálogo comercial", None)]),
     ]
     bloques = []
     for titulo, filas in cols:

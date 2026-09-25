@@ -170,6 +170,13 @@ check("abajo con la pieza de arriba: ninguna camiseta", list(m) == [False, False
 m = busqueda.candidatos(pos9, et9, "arriba", {"tipo": "vaquero"})
 check("arriba con la pieza de abajo: ningún pantalón", list(m) == [True, True, False], f"{list(m)}")
 
+print("\n=== 10. Rasgos de estilo (r1) ===")
+r = e.normalizar_rasgos({"cargo": 1, "fantasia": True, "formalidad": 7, "inventado": True})
+check("rasgos: solo los de la lista, en booleano", set(r) == set(e.RASGOS) | {"formalidad_ia", "version"}
+      and r["cargo"] is True and r["fantasia"] is True and "inventado" not in r)
+check("rasgos: formalidad fuera de 1-5 se descarta", r["formalidad_ia"] is None)
+check("rasgos: versión aparte de la congelada", e.VERSION_RASGOS != e.VERSION)
+
 print()
 if fallos:
     print(f"FALLAN {len(fallos)}: {fallos}")

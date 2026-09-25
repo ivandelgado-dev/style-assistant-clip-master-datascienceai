@@ -36,7 +36,7 @@ import html as _html
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 
-from paginas import armario, bienvenida, busqueda
+from paginas import armario, bienvenida, busqueda, outfits
 from paginas.busqueda import ETIQUETA, NOMBRES, POSICION, nombre
 from paginas.nucleo import (BD_USUARIOS, DATOS, armario_usuario, dato_uri,
                             exige_sesion, usuario)
@@ -121,7 +121,16 @@ def _sugerencia(jpeg: bytes) -> dict | None:
         r = etiquetas.analizar(jpeg)
     except gemini.ErrorGemini:
         return None
-    return r["piezas"][0] if r.get("piezas") else None
+    if not r.get("piezas"):
+        return None
+    pieza = r["piezas"][0]
+    # Rasgos de estilo (de béisbol, cargo, de vestir…): petición aparte, para
+    # no tocar la versión congelada de las etiquetas. Si falla, sin rasgos.
+    try:
+        ras = etiquetas.analizar_rasgos(jpeg)
+    except gemini.ErrorGemini:
+        ras = None
+    return {**pieza, "rasgos": ras} if ras else pieza
 
 
 def _vectorizar(jpeg: bytes):
@@ -308,6 +317,18 @@ def _dialogo_editar(uid: int, fila: dict):
         + 'Rellena solo lo que quieras corregir o lo que la IA no puede saber: '
           'la <b>talla</b> y el <b>corte</b> (holgado = estilo Oversize). Lo que '
           'escribas aquí manda sobre lo que ve la IA.</p>', unsafe_allow_html=True)
+    # Formalidad: la que usan las reglas de «Por estilo», con lo que la mueve.
+    if ia:
+        fz, fz_por, _ = outfits.formalidad(
+            ia.get("tipo") or armario.clave_categoria(fila.get("categoria") or ""),
+            ia.get("estampado") or "liso", ia.get("manga"), ia.get("largo"),
+            armario.clave_categoria(str(ia.get("descripcion") or "")),
+            rasgos=ia.get("rasgos") if isinstance(ia.get("rasgos"), dict) else None,
+            notas=armario.clave_categoria(fila.get("notas") if isinstance(fila.get("notas"), str) else ""))
+        st.markdown(f'<p class="nota-form"><b>Formalidad para los estilos:</b> {fz}/5 '
+                    f'({outfits.FORMAL_NOMBRE[fz]}{", " + _html.escape(fz_por) if fz_por else ""}). '
+                    'Si no cuadra, dilo en las notas: «de vestir» la sube; «informal», '
+                    '«cargo» o «de chándal» la bajan.</p>', unsafe_allow_html=True)
 
     def v(c):          # None o NaN de pandas -> ""
         x = fila.get(c)
@@ -387,6 +408,36 @@ def _describir_pendientes(uid: int):
                                                      "límite de uso). Prueba más tarde.")
                 break
         barra.progress(n / len(pend), text=f"Describiendo… {n}/{len(pend)}")
+    st.rerun()
+
+
+def _completar_rasgos(uid: int):
+    """Botón para pedir los rasgos de estilo de las prendas que ya estaban
+    (etiquetas.RASGOS). Diez fotos por petición: 120 prendas son 12."""
+    from paginas import etiquetas, gemini
+    from paginas.nucleo import rellenar_etiquetas_desde_cache
+    if not gemini.disponible():
+        return
+    pend = armario.sin_rasgos(BD_USUARIOS, uid)
+    if not pend:
+        return
+    c1, c2 = st.columns([3, 1.2], vertical_alignment="center")
+    c1.markdown(f'<p class="nota-form" style="margin:14px 0 0 0;">{len(pend)} '
+                f'prenda{"s" if len(pend) != 1 else ""} sin rasgos de estilo: lo que '
+                'distingue una camisa de vestir de una de béisbol, o un chino de un '
+                'cargo. «Por estilo» funciona mejor con ellos. Las fotos se envían a '
+                'Gemini (Google), diez por petición.</p>', unsafe_allow_html=True)
+    if not c2.button("Completar", key="arm_rasgos"):
+        return
+    datos = []
+    for _, foto in pend:
+        try:
+            datos.append((DATOS / foto).read_bytes())
+        except OSError:
+            pass
+    with st.spinner(f"Pidiendo rasgos de {len(datos)} prendas…"):
+        etiquetas.rasgos_lote(datos, aviso=lambda *_: None)
+        rellenar_etiquetas_desde_cache(uid)
     st.rerun()
 
 
@@ -521,6 +572,7 @@ def mi_armario():
         return
 
     _describir_pendientes(u["id"])
+    _completar_rasgos(u["id"])
 
     # Qué posiciones faltan: la búsqueda no puede cubrirlas.
     faltan = [ETIQUETA[p].lower() for p in ("arriba", "abajo")

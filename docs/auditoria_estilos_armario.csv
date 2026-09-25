@@ -1,0 +1,119 @@
+﻿id;posicion;tipo;color;formalidad;por;descripcion_ia;notas;Casual;Streetwear;Athleisure;Minimalista;Smart Casual;Business Casual;Preppy;Rocker;Grunge;Oversize;motivo_business_casual
+67;abajo;bermuda;negro;2;;Bermuda cargo vaquera en color negro.;vaquero corto tipo cargo;1;2;0;0;0;0;0;0;0;0;Bermuda cargo: demasiado informal para Business Casual.
+68;abajo;bermuda;gris oscuro;2;;Bermuda vaquera oscura con estampado de cuadros.;bermuda vaquera ancha;1;2;0;0;0;0;0;0;0;0;Business Casual no lleva nada corto.
+69;abajo;bermuda;blanco;2;;Bermuda vaquera blanca con estampado de letras.;vaquero corto estampado;1;2;0;0;0;0;0;0;0;0;Un estampado grande o un logo no es de Business Casual.
+70;abajo;bermuda;azul;2;;Bermuda vaquera ancha en color azul.;vaquero tipo jorts;1;2;0;0;0;0;0;0;0;1;Business Casual no lleva nada corto.
+71;abajo;bermuda;azul marino;2;;Bermuda vaquera oscura estilo cargo con cordón ajustable;bermuda vaquera tipo cargo con cintura elastica;1;2;0;0;0;0;0;0;0;0;Bermuda cargo: demasiado informal para Business Casual.
+72;abajo;bermuda;azul claro;2;;Bermuda vaquera clara de corte clásico con bolsillos;bermuda vaquera ancha;1;2;0;0;0;0;0;0;0;0;Business Casual no lleva nada corto.
+74;abajo;bermuda;beige;3;tipo chino;Bermuda lisa de algodón color beige con bolsillos delanteros;bermuda tipo chino;1;2;0;0;0;0;1;0;0;0;Business Casual no lleva nada corto.
+75;abajo;bermuda;blanco;3;tipo chino;Bermuda lisa de color blanco con cierre de botón;bermuda tipo chino de lino;1;2;0;0;0;0;1;0;0;0;Business Casual no lleva nada corto.
+76;abajo;bermuda;negro;3;tipo chino;Bermuda lisa de algodón en color negro;bermuda tipo chino de vestir;1;2;0;0;0;0;1;0;0;0;Business Casual no lleva nada corto.
+77;abajo;bermuda;burdeos;3;tipo chino;Bermuda lisa de algodón en color burdeos;bermuda tipo chino;1;2;0;0;0;0;1;0;0;0;Business Casual no lleva nada corto.
+78;abajo;bermuda;gris;2;;Bermuda vaquera gris estilo clásico con bolsillos;bermuda vaquera recta;1;2;0;0;0;0;0;0;0;0;Business Casual no lleva nada corto.
+79;abajo;bermuda;negro;1;de chándal;Bermuda deportiva negra de felpa con cordón ajustable;pantalon corto de chandal basico;1;2;1;0;0;0;0;0;0;0;Bermuda de chándal: demasiado informal para Business Casual.
+80;abajo;bermuda;azul;1;de chándal;Bermuda deportiva de felpa azul con cordón ajustable;pantalon corto de chandal basico;1;2;1;0;0;0;0;0;0;0;Bermuda de chándal: demasiado informal para Business Casual.
+81;abajo;bermuda;burdeos;2;;Bermuda burdeos de algodón con cordón ajustable;pantalon corto con cintura elastica;1;2;1;0;0;0;0;0;0;0;Business Casual no lleva nada corto.
+82;abajo;bermuda;negro;1;de chándal;Bermuda negra con estampado lateral en azul;pantalon corto de chandal estampado;1;2;1;0;0;0;0;0;0;0;Bermuda de chándal: demasiado informal para Business Casual.
+83;abajo;bermuda;multicolor;1;de chándal;Bermuda estilo tie-dye multicolor;pantalon corto de chandal tie dye;1;2;1;0;0;0;0;0;0;0;Bermuda de chándal: demasiado informal para Business Casual.
+84;abajo;bermuda;marron;2;;Bermuda marrón tipo cargo con bolsillos laterales;bermuda tipo cargo ligera con cintura elastica;1;2;1;0;0;0;0;0;0;0;Bermuda cargo: demasiado informal para Business Casual.
+85;abajo;bermuda;negro;2;;Bermuda cargo negra con múltiples bolsillos;bermuda tipo cargo con bolsillos;1;2;1;0;0;0;0;0;0;0;Bermuda cargo: demasiado informal para Business Casual.
+115;abajo;chino;beige;5;de vestir;Pantalon chino largo de color beige claro;pantalon chino de vestir con dobladillo;2;0;0;2;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+116;abajo;chino;negro;5;de vestir;Pantalon largo de vestir negro;pantalon chino de vestir;2;0;0;2;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+117;abajo;chino;azul marino;5;de vestir;Pantalon largo de vestir en color azul marino;pantalon chino de vestir;2;0;0;2;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+59;abajo;jogger;marron;1;;Pantalón jogger marrón con bolsillos cargo;pantalon de chandal tipo cargo;0;2;2;0;0;0;0;0;0;0;Jogger: demasiado informal para Business Casual.
+60;abajo;jogger;blanco;1;;Pantalón jogger blanco con bolsillos cargo;pantalon de chandal tipo jogger cargo;0;2;2;0;0;0;0;0;0;0;Jogger: demasiado informal para Business Casual.
+61;abajo;jogger;gris;1;;Pantalon de chandal gris largo.;pantalon de chandal tipo wide leg;0;2;2;0;0;0;0;0;0;0;Jogger: demasiado informal para Business Casual.
+62;abajo;jogger;beige;1;;Pantalon de chandal beige largo.;pantalon de chandal tipo wide leg;0;2;2;0;0;0;0;0;0;0;Jogger: demasiado informal para Business Casual.
+63;abajo;pantalon;marron;3;de trabajo;Pantalon largo de pana marron.;pantalon de pana tipo straight;1;1;0;2;2;0;0;1;1;0;Pantalón de trabajo: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+64;abajo;pantalon;marron;2;cargo;Pantalon cargo largo de color marron.;pantalon tipo cargo de;1;1;0;0;0;0;0;1;1;0;Pantalón cargo: demasiado informal para Business Casual.
+65;abajo;pantalon;beige;2;cargo;Pantalon cargo largo color beige.;pantalon tipo cargo;1;1;0;0;0;0;0;1;1;0;Pantalón cargo: demasiado informal para Business Casual.
+66;abajo;pantalon;azul claro;2;cargo;Vaquero cargo largo en color azul claro.;pantalon tipo cargo de lona;1;1;0;0;0;0;0;1;1;0;Pantalón cargo: demasiado informal para Business Casual.
+73;abajo;bermuda;beige;3;tipo chino;Bermuda de algodón beige con estampado de rayas verticales;pantalon tipo pirata;1;2;0;0;0;0;1;0;0;0;Business Casual no lleva nada corto.
+50;abajo;vaquero;gris oscuro;3;;Pantalón vaquero largo en tono gris oscuro desgastado;vaquero tipo straight;2;2;0;1;1;0;0;2;2;0;Vaquero: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+51;abajo;vaquero;negro;3;;Pantalón vaquero negro largo;vaquero tipo slim;2;2;0;1;1;0;1;2;2;0;Vaquero: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+52;abajo;vaquero;marron;3;;Pantalón vaquero marrón largo;vaquero tipo baggy;2;2;0;1;0;0;0;2;2;0;En Business Casual, el vaquero solo oscuro.
+53;abajo;vaquero;gris;3;;Pantalón vaquero gris largo;vaquero tipo baggy;2;2;0;1;0;0;0;2;2;0;En Business Casual, el vaquero solo oscuro.
+54;abajo;vaquero;azul claro;3;;Pantalón vaquero azul claro largo;vaquero tipo mom;2;2;0;1;0;0;1;2;2;0;En Business Casual, el vaquero solo oscuro.
+55;abajo;vaquero;azul claro;2;rota;Vaquero azul claro roto con rotos;vaquero tipo wide leg;2;2;0;0;0;0;0;2;2;0;En Business Casual, el vaquero solo oscuro.
+56;abajo;vaquero;azul claro;3;;Pantalón vaquero azul claro largo;vaquero tipo straight cropped;2;2;0;1;0;0;0;2;2;0;En Business Casual, el vaquero solo oscuro.
+57;abajo;vaquero;azul;3;;Pantalón vaquero azul largo;vaquero tipo slouchy;2;2;0;1;0;0;0;2;2;0;En Business Casual, el vaquero solo oscuro.
+58;abajo;vaquero;crudo;2;rota;Pantalón vaquero crudo con rotos;vaquero tipo straight mom;2;2;0;0;0;0;0;2;2;0;En Business Casual, el vaquero solo oscuro.
+4;arriba;camisa;beige;3;de manga corta;Camisa de manga corta color beige con bolsillo.;camisa manga corta;1;1;0;2;2;0;2;1;2;0;Camisa de manga corta: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+5;arriba;camisa;azul marino;2;de fantasía;Camisa azul marino con estampado de piñas.;camisa manga corta;1;1;0;0;0;0;0;1;2;0;Un estampado grande o un logo no es de Business Casual.
+6;arriba;camisa;gris;3;de manga corta;Camisa de manga corta a cuadros grises.;camisa manga corta;1;1;0;0;2;0;2;1;2;0;Camisa de manga corta: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+8;arriba;camisa;negro;2;de béisbol;Camisa de béisbol negra con rayas diplomáticas.;camisa de beisbol;1;1;0;0;0;0;0;1;2;0;Camisa de béisbol: demasiado informal para Business Casual.
+44;arriba;camisa;blanco;3;de manga corta;Camisa blanca de manga corta con textura arrugada;camisa manga corta;1;1;0;2;2;0;0;1;2;0;Camisa de manga corta: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+98;arriba;camisa;negro;3;sobrecamisa;Chaqueta negra de algodón con bolsillos delanteros;sobrecamisa de lona;1;1;0;2;2;0;2;1;2;0;Camisa sobrecamisa: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+99;arriba;camisa;gris;3;de cuadros;Camisa de cuadros blancos y grises abierta;sobrecamisa de franela a cuadros;1;1;0;0;2;0;2;1;2;0;Camisa de cuadros: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+100;arriba;camisa;gris;3;de cuadros;Camisa de cuadros grises y blancos de manga larga;camisa de franela a cuadros;1;1;0;0;2;0;2;1;2;0;Camisa de cuadros: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+101;arriba;camisa;verde oscuro;3;de cuadros;Camisa de manga larga de cuadros en tonos oscuros.;camisa de cuadros;1;1;0;0;2;0;2;1;2;0;Camisa de cuadros: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+102;arriba;camisa;beige;2;con estampado;Camisa de manga larga con estampado y letras grandes.;camisa de cuadros con estampado grafico;1;1;0;0;0;0;0;1;2;0;Un estampado grande o un logo no es de Business Casual.
+103;arriba;camisa;rojo;3;de cuadros;Camisa de manga larga de cuadros rojos y negros.;camisa de cuadros;1;1;0;0;2;0;2;1;2;0;Camisa de cuadros: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+105;arriba;camisa;azul claro;5;de vestir;Camisa formal de rayas blancas y azul claro.;camisa milrayas de vestir;1;0;0;0;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+106;arriba;camisa;azul marino;4;;Camisa lisa de manga larga en color azul marino.;camisa casual lisa;1;0;0;2;2;2;2;1;0;0;Es una prenda muy de Business Casual.
+107;arriba;camisa;blanco;5;de vestir;Camisa blanca lisa de manga larga con cuello.;camisa de vestir clasica;1;0;0;2;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+108;arriba;camisa;negro;4;;Camisa negra lisa con un bolsillo delantero.;camisa lisa casual;1;0;0;2;2;2;2;1;0;0;Es una prenda muy de Business Casual.
+114;arriba;camisa;blanco;3;informal;Camisa blanca formal de manga larga con botones;camisa informal de algodon;1;1;0;2;2;0;2;1;2;0;Camisa informal: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+9;arriba;camiseta;gris;2;deportiva;Camisa de manga corta gris con rayas difuminadas.;camiseta deportiva manga corta;2;2;2;0;0;0;0;2;2;0;Camiseta deportiva: demasiado informal para Business Casual.
+12;arriba;camiseta;blanco;2;;Camiseta blanca de manga larga con texto pequeño;camiseta manga larga;2;2;2;0;0;0;0;2;2;0;Camiseta: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+13;arriba;camiseta;blanco;2;;Camiseta blanca de manga larga con texto frontal;camiseta manga larga;2;2;2;0;0;0;0;2;2;0;Camiseta: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+14;arriba;camiseta;verde oscuro;2;;Camiseta verde oscuro de manga larga con gráfico central;camiseta manga larga;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+15;arriba;camiseta;negro;2;;Camiseta negra de manga larga con diseño en mangas;camiseta manga larga;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+16;arriba;camiseta;beige;2;;Polo beige de manga larga con estampado deportivo;camiseta deportiva manga larga;2;2;2;0;0;0;0;2;2;0;Camiseta deportiva: demasiado informal para Business Casual.
+17;arriba;camiseta;negro;2;;Polo negro de manga larga con banda azul central;camiseta manga larga;2;2;2;0;0;0;0;2;2;0;Camiseta: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+26;arriba;camiseta;blanco;3;lisa;Camiseta blanca lisa de manga corta.;camieseta manga corta;2;2;2;2;1;0;0;2;2;0;Camiseta lisa: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+27;arriba;camiseta;rojo;2;;Camiseta de rayas rojas y negras con gráfico frontal.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Camiseta: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+28;arriba;camiseta;gris oscuro;2;;Camiseta gris oscuro con texto deportivo en el pecho.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Camiseta deportiva: demasiado informal para Business Casual.
+29;arriba;camiseta;blanco;3;de rayas;Camiseta blanca de rayas verticales azules y negras.;camieseta manga corta;2;2;2;0;1;0;0;2;2;0;Camiseta de rayas: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+30;arriba;camiseta;negro;2;;Camiseta negra con estampado gráfico musical central.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+31;arriba;camiseta;crudo;2;;Camiseta blanca de manga corta con letras rojas.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+32;arriba;camiseta;verde oscuro;2;;Camiseta verde oscuro de manga larga con doble capa blanca.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+36;arriba;camiseta;crudo;2;;Camiseta blanca con múltiples estampados y letras de estilo vintage.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+37;arriba;camiseta;beige;2;;Camiseta beige con gráfico de zapatillas Nike y caja.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+38;arriba;camiseta;crudo;2;;Camiseta blanca con calavera y texto Lost Soul.;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+39;arriba;camiseta;gris;3;de rayas;Camiseta gris con rayas verticales negras y líneas turquesas.;camieseta manga corta;2;2;2;0;1;0;0;2;2;0;Camiseta de rayas: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+43;arriba;camiseta;azul marino;2;;Camiseta de manga larga azul oscuro con estampados;camiseta manga larga;2;2;2;0;0;0;0;2;2;0;Un estampado grande o un logo no es de Business Casual.
+45;arriba;camiseta;naranja;2;;Camiseta naranja de manga corta con logo redondo;camieseta manga corta;2;2;2;0;0;0;0;2;2;0;Camiseta: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+87;arriba;jersey;negro;2;con estampado;Jersey de punto negro con diseño de oso estampado;ersey de punto con dibujo;1;0;0;0;0;0;0;0;1;0;Un estampado grande o un logo no es de Business Casual.
+88;arriba;jersey;negro;3;;Jersey de punto negro de cuello redondo;jersey de punto grueso de cuello redondo;1;0;0;2;1;0;1;0;1;0;Jersey: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+89;arriba;jersey;gris;4;de cuello de pico;Jersey de punto gris oscuro con cuello en pico;jersey de cuello en pico;1;0;0;2;1;1;1;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+90;arriba;jersey;camel;4;de punto fino;Jersey de punto color camel de cuello redondo;jersey de punto fino de cuello redondo;1;0;0;2;1;1;1;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+91;arriba;jersey;rojo;4;clásica;Jersey de punto rojo con cuello redondo;jersey de cuello redondo clasic;1;0;0;2;1;1;1;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+92;arriba;jersey;rojo;2;con estampado;Jersey de punto rojo con texto frontal;jersey de cuello redondo con texto corte cropped;1;0;0;0;0;0;0;0;1;0;Un estampado grande o un logo no es de Business Casual.
+94;arriba;jersey;azul marino;2;de sudadera;Sudadera azul marino con rayas de colores y cremallera;jersey de cuello alto con cremallera;1;0;0;0;0;0;0;0;1;0;Jersey de sudadera: demasiado informal para Business Casual.
+95;arriba;jersey;camel;4;de cuello alto;Jersey de punto camel con media cremallera;jersey de cuello alto con cremallera;1;0;0;2;1;1;1;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+96;arriba;jersey;crudo;4;de cuello vuelto;Jersey de punto crudo con cuello vuelto;jersey de cuello vuelto;1;0;0;2;1;1;1;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+118;arriba;jersey;gris oscuro;4;de cuello vuelto;Jersey de punto gris oscuro con cuello vuelto;jersey de cuello vuelto;1;0;0;2;1;1;1;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+1;arriba;polo;gris oscuro;3;;Polo gris oscuro de manga corta.;polo;2;0;0;1;2;0;2;0;0;0;Polo: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+2;arriba;polo;rosa;2;de fantasía;Polo de punto a rayas con texto bordado.;polo;2;0;0;0;0;0;0;0;0;0;Polo de fantasía: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+3;arriba;polo;rojo;2;de fantasía;Polo rojo con franja diagonal y letras.;polo;2;0;0;0;0;0;0;0;0;0;Un estampado grande o un logo no es de Business Casual.
+7;arriba;polo;negro;3;;Polo negro con detalles verdes y logo bordado.;polo;2;0;0;0;2;0;2;0;0;0;Polo: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+93;arriba;polo;marron;4;de punto;Polo de punto marrón con cuello y botones;polo de manga larga de punto;2;0;0;1;2;1;2;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+10;arriba;sudadera;beige;2;;Sudadera lisa de manga larga color beige.;sudadera ligera de cuello redondo;1;2;2;1;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+11;arriba;sudadera;negro;2;;Sudadera lisa de manga larga en color negro;sudadera ligera sin capucha;1;2;2;1;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+18;arriba;sudadera;negro;2;;Sudadera lisa negra de manga larga;sudadera de cuello redondo;1;2;2;1;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+19;arriba;sudadera;marron;2;;Sudadera marrón y negra con gráfico circular;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+20;arriba;sudadera;beige;2;;Sudadera de rayas anchas beige y blancas;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+21;arriba;sudadera;verde oscuro;2;;Sudadera verde oscuro con logo impreso en el pecho.;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+22;arriba;sudadera;multicolor;2;;Sudadera de bloques de color rojo, blanco y marron.;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+23;arriba;sudadera;azul claro;2;;Sudadera con rayas anchas blancas y azul claro.;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+24;arriba;sudadera;gris;2;;Sudadera gris con texto bordado en el pecho.;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+25;arriba;sudadera;gris claro;2;;Sudadera gris claro con pequeño texto bordado.;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+33;arriba;sudadera;rosa;2;;Sudadera rosa de manga larga con etiqueta y texto central.;;1;2;2;0;0;0;0;0;1;2;Sudadera: demasiado informal para Business Casual.
+34;arriba;sudadera;azul claro;2;;Sudadera azul claro con cremallera y parches deportivos.;sudadera con capucha y cremallera;1;2;2;0;0;0;0;0;1;0;Sudadera deportiva: demasiado informal para Business Casual.
+35;arriba;sudadera;rojo;2;;Sudadera roja con capucha y cremallera completa.;sudaderas con capucha y cremallera;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+40;arriba;sudadera;blanco;2;;Sudadera blanca de manga corta con capucha y gráfico.;hoodie de manga corta;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+41;arriba;sudadera;gris;2;;Sudadera gris con texto pequeño en el pecho;sudadera de cuello redondo;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+46;arriba;sudadera;negro;2;;Sudadera con capucha negra con letras estampadas;sudadera con capucha;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+47;arriba;sudadera;verde oscuro;2;;Sudadera con capucha verde oscuro con pequeño dibujo;sudadera con capucha;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+48;arriba;sudadera;camel;2;;Sudadera con capucha color camel y gráfico central;sudadera con capucha;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+49;arriba;sudadera;negro;2;;Sudadera con capucha combinada en negro y cuadros rojos;sudadera con capucha;1;2;2;0;0;0;0;0;1;0;Sudadera: demasiado informal para Business Casual.
+110;encima;abrigo;gris claro;5;clásica;Abrigo de paño en color gris claro.;abrigo de lana de corte clasico;1;0;0;2;1;1;0;0;0;0;Encaja en Business Casual, aunque no es lo más propio del estilo.
+109;encima;blazer;gris;4;informal;Blazer de punto gris con solapas y un botón.;americana informal microestampada;0;0;0;1;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+111;encima;blazer;gris oscuro;5;de vestir;Blazer cruzado gris oscuro con rayas finas y botones;americana cruzada de raya diplomatica;0;0;0;0;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+112;encima;blazer;gris oscuro;5;de vestir;Blazer gris oscuro con coderas y bolsillos de plasto;americana de espiga con coderas;0;0;0;1;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+113;encima;blazer;negro;5;elegante;Blazer negro liso de estilo elegante;americana negra clasica;0;0;0;1;2;2;2;0;0;0;Es una prenda muy de Business Casual.
+97;encima;cazadora;azul;3;;Cazadora vaquera de lavado claro con bolsillos;cazadora vaquera efecto lavado;2;2;0;1;0;0;0;2;1;0;Cazadora: formalidad 3/5 (casual). Business Casual pide de arreglado para arriba (4/5 o más).
+104;encima;cazadora;negro;2;deportiva;Cazadora bomber negra con forro acolchado.;cazadora tipo bomber;2;2;1;1;0;0;0;2;1;0;Cazadora deportiva: formalidad 2/5 (informal). Business Casual pide de arreglado para arriba (4/5 o más).
+42;encima;chaleco;negro;2;;Sudadera sin mangas negra con letras grandes blancas;chaleco de sudadera;0;1;0;0;0;0;0;0;0;0;Chaleco de sudadera: demasiado informal para Business Casual.
+86;encima;chaqueta;azul marino;1;de chándal;Chaqueta deportiva azul marino con cremallera y líneas blancas;chaqueta cortavientos tipo track jacket;2;1;2;0;0;0;0;0;0;0;Chaqueta deportiva: demasiado informal para Business Casual.

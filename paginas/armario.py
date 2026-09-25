@@ -393,6 +393,43 @@ def guardar_etiquetas(bd: Path, usuario_id: int, prenda_id: int,
         cx.close()
 
 
+def sin_rasgos(bd: Path, usuario_id: int) -> list[tuple[int, str]]:
+    """(id, foto) de las prendas con etiquetas pero sin rasgos de estilo
+    (etiquetas.VERSION_RASGOS): las de antes de existir los rasgos."""
+    cx = _conexion(bd)
+    try:
+        filas = cx.execute("SELECT id, foto, etiquetas FROM prendas WHERE usuario_id = ?"
+                           " AND etiquetas IS NOT NULL ORDER BY id",
+                           (int(usuario_id),)).fetchall()
+    finally:
+        cx.close()
+    salida = []
+    for pid, foto, e in filas:
+        try:
+            if not (json.loads(e) or {}).get("rasgos"):
+                salida.append((pid, foto))
+        except (TypeError, ValueError):
+            continue
+    return salida
+
+
+def guardar_rasgos(bd: Path, usuario_id: int, prenda_id: int, rasgos: dict) -> None:
+    """Añade los rasgos a las etiquetas de la prenda, sin tocar el resto."""
+    cx = _conexion(bd)
+    try:
+        f = cx.execute("SELECT etiquetas FROM prendas WHERE id = ? AND usuario_id = ?",
+                       (int(prenda_id), int(usuario_id))).fetchone()
+        if not f or not f[0]:
+            return
+        e = json.loads(f[0])
+        e["rasgos"] = rasgos
+        cx.execute("UPDATE prendas SET etiquetas = ? WHERE id = ? AND usuario_id = ?",
+                   (json.dumps(e, ensure_ascii=False), int(prenda_id), int(usuario_id)))
+        cx.commit()
+    finally:
+        cx.close()
+
+
 def contar(bd: Path, usuario_id: int) -> int:
     cx = _conexion(bd)
     try:

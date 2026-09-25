@@ -634,10 +634,14 @@ CSS = """
   [data-testid="stButtonGroup"] button p{font-size:12px !important;color:inherit !important;}
   [data-testid="stButtonGroup"] button:hover{border-color:var(--ink) !important;
        color:var(--ink) !important;}
+  /* Opción marcada: burdeos claro, nunca tinta. La tinta es de los botones
+     que HACEN algo; así una opción elegida no parece un botón de acción. */
   [data-testid="stButtonGroup"] button[aria-checked="true"],
   [data-testid="stButtonGroup"] button[aria-pressed="true"]{
-       background:var(--ink) !important;border-color:var(--ink) !important;
-       color:var(--base) !important;}
+       background:#F2E4E7 !important;border-color:var(--burdeos) !important;
+       color:var(--burdeos) !important;}
+  [data-testid="stButtonGroup"] button[aria-checked="true"] p,
+  [data-testid="stButtonGroup"] button[aria-pressed="true"] p{font-weight:600 !important;}
   /* La foto de referencia, con altura máxima: si no, empuja las preguntas
      fuera de la pantalla. */
   div[data-testid="stColumn"]:has(.panel-busqueda) div[data-testid="stImage"] img{
@@ -780,6 +784,59 @@ CSS = """
        background:rgba(255,255,255,.85) !important;color:var(--ink) !important;
        box-shadow:0 1px 4px rgba(0,0,0,.15);}
   .st-key-b_fotoref [class*="st-key-b_ampliar_"] button:hover{background:#fff !important;}
+  /* ---- Por estilo: prenda de partida, selector y veredicto -------------- */
+  .ancla{display:flex;gap:14px;align-items:center;background:var(--plate);
+       border-radius:14px;padding:10px;}
+  .ancla img{width:78px;height:78px;object-fit:cover;border-radius:10px;display:block;}
+  .ancla .rot{margin:0 0 3px 0;}
+  .ancla .t{font-size:14px;font-weight:600;margin:0;color:var(--ink);line-height:19px;}
+  .ancla .d{font-size:11.5px;color:var(--muted);margin:2px 0 0 0;}
+  /* ---- Por estilo: pasos numerados, hueco de prenda, lo opcional plegado */
+  .st-key-est_panel [data-testid="stMarkdownContainer"]{margin-bottom:0 !important;}
+  .paso-e{display:flex;align-items:center;gap:10px;margin:0 !important;padding:14px 0 0 0;font-size:11px;
+       letter-spacing:.5px;text-transform:uppercase;font-weight:700;color:var(--ink);}
+  .paso-e span{flex:0 0 22px;height:22px;border-radius:50%;border:1px solid var(--ink);
+       display:flex;align-items:center;justify-content:center;font-size:11px;
+       letter-spacing:0;font-weight:600;}
+  .st-key-est_panel .st-key-est_modo [data-testid="stButtonGroup"] > div{
+       flex-wrap:nowrap !important;gap:0 !important;}
+  .st-key-est_panel .st-key-est_modo [data-testid="stButtonGroup"] button{flex:1 1 0;
+       min-height:42px;padding:4px 8px !important;}
+  .st-key-est_panel .st-key-est_modo [data-testid="stButtonGroup"] button p{
+       white-space:normal !important;overflow:visible !important;line-height:14px !important;}
+  .st-key-est_elegir button{height:92px !important;border:1px dashed var(--faint) !important;
+       background:var(--plate) !important;color:var(--ink) !important;
+       text-transform:none !important;letter-spacing:.2px !important;border-radius:14px !important;}
+  .st-key-est_elegir button p{font-size:13px !important;}
+  .st-key-est_elegir button:hover{border-color:var(--burdeos) !important;
+       background:#F2E4E7 !important;color:var(--burdeos) !important;}
+  .st-key-est_panel div[data-testid="stExpander"] summary p{font-size:13px !important;}
+  .st-key-est_panel div[data-testid="stExpander"] summary{padding:14px 0 !important;}
+  .st-key-est_panel div[data-testid="stExpander"]:last-of-type{
+       border-bottom:1px solid var(--line) !important;}
+  p.nota-form.ayuda{margin:-4px 0 12px 0 !important;}
+  .ficha-look .por{font-size:11.5px;color:var(--muted);margin:6px 0 0 0;line-height:15px;}
+  .ficha-look .por b{color:var(--muted);font-weight:600;margin-right:4px;}
+  .pick{background:var(--plate);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+  .pick img{width:100%;aspect-ratio:4/3;object-fit:contain;display:block;background:#fff;}
+  .pick p{font-size:11px;line-height:15px;color:var(--muted);margin:7px 10px 8px 10px;
+       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .veredicto{display:flex;gap:16px;align-items:flex-start;margin-top:26px;
+       padding:18px 20px;border-radius:14px;max-width:70ch;}
+  .veredicto.ok{background:#E7EDE2;}
+  .veredicto.no{background:#F1E1E1;}
+  .veredicto .marca{flex:0 0 34px;height:34px;border-radius:50%;display:flex;
+       align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;}
+  .veredicto.ok .marca{background:#4E6B45;}
+  .veredicto.no .marca{background:var(--burdeos);}
+  .veredicto .vt{font-size:17px;font-weight:600;margin:4px 0 4px 0;color:var(--ink);}
+  .veredicto .vr{font-size:13px;line-height:20px;margin:0;color:var(--muted);}
+  .lk .lienzo div{position:relative;}
+  .lk .tuya{position:absolute;left:6px;bottom:6px;font-size:9.5px;letter-spacing:.8px;
+       text-transform:uppercase;font-weight:700;background:var(--ink);color:#fff;
+       padding:4px 7px;border-radius:7px;}
+  .lk .lienzo div.suya img{outline:2px solid var(--burdeos);outline-offset:3px;}
+  .lk .chip.fuera{background:rgba(123,45,64,.9);color:#fff;}
   .falta{margin-top:18px;font-size:12.5px;line-height:19px;color:var(--muted);max-width:64ch;}
 </style>
 """

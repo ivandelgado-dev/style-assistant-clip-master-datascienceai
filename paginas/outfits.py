@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 from collections import defaultdict
 
 import numpy as np
@@ -65,15 +66,15 @@ ESTILOS = {
         "idea": "Lo de todos los días: básicos que combinan sin pensar.",
         "arriba": {"camiseta": 2, "polo": 2, "camisa": 1, "sudadera": 1, "jersey": 1},
         "abajo": {"vaquero": 2, "chino": 2, "pantalon": 1, "bermuda": 1},
-        "encima": {"cazadora": 2, "chaqueta": 2, "cardigan": 1, "sudadera": 1},
+        "encima": {"cazadora": 2, "chaqueta": 2, "cardigan": 1, "sudadera": 1, "abrigo": 1},
         "capa": "opcional",
     },
     "streetwear": {
         "nombre": "Streetwear",
         "idea": "Sudaderas, gráficos y pantalón con volumen.",
-        "arriba": {"sudadera": 2, "camiseta": 2},
+        "arriba": {"sudadera": 2, "camiseta": 2, "camisa": 1},
         "abajo": {"vaquero": 2, "jogger": 2, "bermuda": 2, "pantalon": 1},
-        "encima": {"cazadora": 2, "sudadera": 2, "chaqueta": 1},
+        "encima": {"cazadora": 2, "sudadera": 2, "chaqueta": 1, "chaleco": 1},
         "capa": "opcional",
     },
     "athleisure": {
@@ -81,7 +82,7 @@ ESTILOS = {
         "idea": "Ropa deportiva para la calle: punto y tejido técnico.",
         "arriba": {"camiseta": 2, "sudadera": 2},
         "abajo": {"jogger": 2, "bermuda": 1},
-        "encima": {"sudadera": 2, "cazadora": 1},
+        "encima": {"sudadera": 2, "chaqueta": 2, "cazadora": 1},
         "capa": "opcional",
     },
     "minimalista": {
@@ -191,32 +192,238 @@ def prendas_de(arm) -> list[dict]:
         def txt(x):      # sin tildes ni mayúsculas: «Algodón» == algodon
             return _clave(x) if isinstance(x, str) else ""
         tejido = txt(r.tejido) or e.get("tejido")
+        tipo = e.get("tipo") or txt(r.categoria)
+        # Un pantalón corto es una bermuda para las reglas, aunque la categoría
+        # diga «pantalon» (visto en uso: un «pantalón pirata» salía en Smart
+        # Casual con nivel 2, mientras las bermudas no entraban).
+        if r.posicion == "abajo" and e.get("largo") == "corto" and tipo in ("pantalon", "chino", "vaquero"):
+            tipo = "bermuda"
+        desc = _clave(str(e.get("descripcion") or ""))
+        texto = desc + " " + txt(r.notas)
+        ras = e.get("rasgos") if isinstance(e.get("rasgos"), dict) else {}
+        estampado = e.get("estampado") or "liso"
+        fz, fz_por, fz_marcas = formalidad(tipo, estampado, e.get("manga"),
+                                           e.get("largo"), desc, rasgos=ras,
+                                           notas=txt(r.notas))
         out.append({
             "i": i, "id": int(r.id), "posicion": r.posicion,
-            "tipo": e.get("tipo") or txt(r.categoria),
+            "tipo": tipo,
             "color": nom, "lab": lab if np.all(np.isfinite(lab)) else None,
-            "estampado": e.get("estampado") or "liso",
+            "estampado": estampado,
             "tejido": tejido, "manga": e.get("manga"),
             "corte": txt(r.corte) or None,
             "informal": _informal(e.get("tipo") or txt(r.categoria), e, txt(r.notas)),
             "vestir": any(w in _clave(str(e.get("descripcion") or "")) + " " + txt(r.notas)
                           for w in ("de vestir", "traje")),
             "largo": e.get("largo"),
+            "formalidad": fz, "formal_por": fz_por, "marcas": fz_marcas,
+            "logo_discreto": bool(ras.get("logo_discreto")) or _hay(texto, "bordad", "pequen"),
+            "manga_corta": (e.get("manga") == "corta" or bool(ras.get("manga_corta"))
+                            or _hay(texto, "manga corta")),
+            "cuello_alto": bool(ras.get("cuello_alto")) or _hay(
+                texto, "cuello vuelto", "cuello alto", "cuello cisne"),
+            "sobrecamisa": bool(ras.get("sobrecamisa")) or _hay(texto, "sobrecamisa", "overshirt"),
         })
     return out
 
 
-# Palabras que delatan una prenda de chándal o utilitaria aunque su tipo sea
-# «pantalon» (la lista cerrada de tipos no tiene «cargo» ni «chándal»). Se
-# miran en la descripción de la IA y en las notas del usuario.
-_INFORMAL = ("cargo", "chandal", "deportiv", "jogger", "sudader")
+# ---------------------------------------------------------------------------
+# Formalidad (1-5): lo que el tipo solo no dice
+# ---------------------------------------------------------------------------
+# El tipo cerrado no distingue una camisa de vestir de una de béisbol ni un
+# chino de un cargo. La formalidad sale del tipo y de la descripción de la IA
+# (que ha visto la foto) más las notas del usuario, con reglas escritas aquí.
+# Visto en uso: una camisa de béisbol salía «muy Preppy» y en Business Casual.
+# Escala, la de las guías de vestimenta: 1 deporte, 2 informal, 3 casual,
+# 4 arreglado, 5 formal.
+FORMAL_NOMBRE = {1: "deporte", 2: "informal", 3: "casual", 4: "arreglado", 5: "formal"}
+FORMAL_BASE = {"jogger": 1, "bermuda": 2, "sudadera": 2, "chaleco": 2, "camiseta": 2,
+               "vaquero": 3, "pantalon": 3, "polo": 3, "jersey": 3, "cardigan": 3,
+               "cazadora": 3, "chaqueta": 3, "chino": 4, "camisa": 4, "abrigo": 4,
+               "blazer": 5}
+# (palabra en el texto, cómo se dice): la primera que aparece manda.
+_SUBE = [("de vestir", "de vestir"), ("formal", "formal"), ("milrayas", "milrayas"),
+         ("oxford", "oxford"), ("elegante", "elegante"), ("clasic", "clásica"),
+         ("traje", "de traje"), ("punto fino", "de punto fino"),
+         ("cuello vuelto", "de cuello vuelto"), ("cuello alto", "de cuello alto"),
+         ("cuello en pico", "de cuello de pico")]
+_BAJA = [("informal", "informal")]
+_TOPE = [  # (tope, palabra, cómo se dice, marca)
+    (1, "chandal", "de chándal", "deporte"), (2, "deportiv", "deportiva", "deporte"),
+    (1, "track", "de chándal", "deporte"), (1, "felpa", "de felpa", "deporte"),
+    (1, "jogger", "jogger", "deporte"),
+    (2, "cargo", "cargo", "cargo"), (2, "beisbol", "de béisbol", "fantasia"),
+    (2, "baseball", "de béisbol", "fantasia"), (2, "bolos", "de bolos", "fantasia"),
+    (2, "bowling", "de bolos", "fantasia"), (2, "hawaian", "hawaiana", "fantasia"),
+    (2, "tie dye", "tie-dye", "fantasia"), (2, "tie-dye", "tie-dye", "fantasia"),
+    (2, "roto", "rota", "roto"), (2, "capucha", "con capucha", "sudadera"),
+    (2, "hoodie", "con capucha", "sudadera"), (2, "sudader", "de sudadera", "sudadera"),
+    (3, "franela", "de franela", "rustica"), (3, "sobrecamisa", "sobrecamisa", "rustica"),
+    (3, "lona", "de lona", "rustica"), (3, "baggy", "baggy", "volumen"),
+    (3, "wide leg", "wide leg", "volumen"), (3, "slouchy", "slouchy", "volumen"),
+    (3, "jorts", "jorts", "volumen"),
+]
+_GRAFICO = ("grafico", "calavera", "dibujo", "letras", "texto")
 
 
-def _informal(tipo: str, e: dict, notas: str) -> bool:
+def _hay(texto: str, *palabras: str) -> bool:
+    """Alguna palabra EMPIEZA una palabra del texto («formal» no casa con «informal»)."""
+    return any(re.search(r"(?<![a-z])" + re.escape(w), texto) for w in palabras)
+
+
+# Rasgos de la IA (etiquetas.RASGOS) que ponen tope, como las palabras.
+# «deportiva» de la IA pone tope 2, no 1: en la revisión a mano marcaba
+# también una bomber y una camiseta con un parche (experiments/rasgos_r1).
+# El 1 (chándal de verdad) lo dan las palabras («chándal», «jogger»…).
+_RASGO_TOPE = {"deportiva": (2, "deportiva", "deporte"), "cargo": (2, "cargo", "cargo"),
+               "rota": (2, "rota", "roto"), "capucha": (2, "con capucha", "sudadera"),
+               "fantasia": (2, "de fantasía", "fantasia"),
+               "rustica": (3, "de trabajo", "rustica"), "volumen": (3, "ancha", "volumen")}
+
+
+# Palabras con las que el usuario DICE cómo de arreglada es una prenda. Las
+# que solo describen («cuello alto», «clásica», «lisa») no cuentan: visto en
+# uso, «jersey de cuello alto con cremallera» tapaba que la IA veía una
+# sudadera deportiva.
+_DECLARACION = ("de vestir", "formal", "elegante", "traje", "informal", "casual",
+                "chandal", "deportiv", "cargo", "jogger")
+
+
+def _declara(notas: str) -> bool:
+    """¿Dicen algo las notas del usuario sobre lo arreglada que es la prenda?"""
+    return bool(notas) and _hay(notas, *_DECLARACION)
+
+
+def formalidad(tipo: str, estampado: str, manga: str | None, largo: str | None,
+               texto: str, rasgos: dict | None = None,
+               notas: str = "") -> tuple[int, str, set]:
+    """(nivel 1-5, lo que lo explica, marcas).
+
+    Fuentes: el tipo; lo que la IA ve en la foto (`rasgos`, sí/no cerrados,
+    y `texto`, su descripción); y las `notas` del usuario. Lo declarado manda:
+    si las notas hablan de formalidad, cuentan ellas y no lo que vio la IA.
+    """
+    notas = notas or ""
+    if _declara(notas):
+        texto, rasgos = notas, None
+    else:
+        texto = f"{texto or ''} {notas}"
+    R = rasgos or {}
+    f = FORMAL_BASE.get(tipo, 3)
+    por, marcas = "", set()
+    corto = tipo == "bermuda" or largo == "corto"
+    discreto = R.get("logo_discreto") or _hay(texto, "bordad", "pequen")
+    grafico = (estampado in ("estampado", "camuflaje") or R.get("grafico_grande")
+               or (estampado == "logo" and not discreto)
+               or (_hay(texto, *_GRAFICO) and not discreto))
+    if corto:
+        # Una bermuda solo sube si es de sastre; «clásica» no la hace de vestir.
+        if _hay(texto, "chino", "de vestir") or R.get("de_vestir"):
+            f, por = f + 1, "tipo chino"
+    else:
+        sube = next((d for w, d in _SUBE if _hay(texto, w)), None) or (
+            "de vestir" if R.get("de_vestir") else None)
+        if sube:
+            f, por = f + 1, sube
+        elif tipo == "camiseta" and estampado in ("liso", "rayas") and not grafico:
+            f, por = f + 1, "lisa" if estampado == "liso" else "de rayas"
+        elif tipo == "polo" and _hay(texto, "punto", "manga larga"):
+            f, por = f + 1, "de punto"
+    baja = next((d for w, d in _BAJA if _hay(texto, w)), None)
+    if baja:
+        f, por = f - 1, baja
+    elif tipo == "camisa" and (manga == "corta" or R.get("manga_corta")
+                               or _hay(texto, "manga corta")):
+        f, por = f - 1, "de manga corta"
+    elif tipo == "camisa" and estampado == "cuadros":
+        f, por = f - 1, "de cuadros"
+    # Topes: primero los de las palabras (su nombre es más preciso: «de
+    # béisbol» mejor que «de fantasía»), después los de los rasgos.
+    topes = [(t, d, m) for t, w, d, m in _TOPE if _hay(texto, w)]
+    topes += [v for k, v in _RASGO_TOPE.items() if R.get(k)]
     if tipo == "jogger":
-        return True
+        topes.append((1, "jogger", "deporte"))
+    if grafico:
+        topes.append((2, "con estampado", "grafico"))
+    if corto:
+        topes.append((3, "corta", "corto"))
+    for t, d, m in sorted(topes, key=lambda x: x[0]):
+        marcas.add(m)
+        if f > t:
+            f, por = t, d
+    return max(1, min(5, f)), por, marcas
+
+
+# Qué formalidad admite cada estilo, prenda a prenda (mín, máx).
+VENTANA = {"casual": (1, 5), "streetwear": (1, 3), "athleisure": (1, 3),
+           "minimalista": (2, 5), "smart_casual": (3, 5), "business_casual": (4, 5),
+           "preppy": (3, 5), "rocker": (2, 4), "grunge": (2, 3), "oversize": (1, 4)}
+# Excepciones por posición: una bermuda tipo chino (3) no es Athleisure.
+VENTANA_POS = {("athleisure", "abajo"): (1, 2)}
+# Dentro de un mismo look, de lo más informal a lo más formal, como mucho 2
+# escalones: una camisa de vestir con una bermuda de chándal no es un estilo.
+SALTO_MAX = 2
+
+
+def _texto_ventana(v: tuple[int, int]) -> str:
+    lo, hi = v
+    if hi == 5:
+        return f"de {FORMAL_NOMBRE[lo]} para arriba ({lo}/5 o más)"
+    if lo == 1:
+        return f"hasta {FORMAL_NOMBRE[hi]} ({hi}/5 como mucho)"
+    return f"entre {FORMAL_NOMBRE[lo]} y {FORMAL_NOMBRE[hi]}"
+
+
+def _fuera_de_ventana(estilo: str, p: dict) -> str | None:
+    f = p.get("formalidad")
+    if f is None:
+        return None
+    v = VENTANA_POS.get((estilo, p.get("posicion")), VENTANA[estilo])
+    if v[0] <= f <= v[1]:
+        return None
+    que = f"{_leg(p['tipo']).capitalize()} {p.get('formal_por') or ''}".strip()
+    return (f"{que}: formalidad {f}/5 ({FORMAL_NOMBRE[f]}). "
+            f"{ESTILOS[estilo]['nombre']} pide {_texto_ventana(v)}.")
+
+
+def capas_ok(a: dict, c: dict, b: dict) -> bool:
+    """¿Se puede llevar `c` encima de `a`, con `b` abajo? Reglas de sastrería
+    y de temporada, no de estilo: valen para todos."""
+    corto_abajo = b["tipo"] == "bermuda" or b.get("largo") == "corto"
+    camisa_corta = a["tipo"] in ("camisa", "polo") and a.get("manga_corta")
+    if c["tipo"] in ("blazer", "abrigo"):
+        # Ni americana ni abrigo con bermuda; ni sobre una camisa de manga corta.
+        if corto_abajo or (a["tipo"] == "camisa" and a.get("manga_corta")):
+            return False
+    if a.get("sobrecamisa"):
+        return False           # una sobrecamisa ya es la capa de fuera
+    if c["tipo"] == "sudadera" and a["tipo"] not in ("camiseta", "camisa"):
+        return False           # una sudadera encima de un polo o un jersey, no
+    if c["tipo"] in ("jersey", "cardigan") and a["tipo"] in ("camisa", "polo"):
+        # Bajo el punto, cuello a la vista y manga larga; y un cuello vuelto
+        # no va sobre un cuello de camisa.
+        if camisa_corta or c.get("cuello_alto"):
+            return False
+    return True
+
+
+# Palabras que delatan una prenda informal aunque su tipo diga otra cosa: la
+# lista cerrada de tipos no tiene «cargo», «chándal» ni «camisa de béisbol».
+# Se miran en la descripción de la IA y en las notas del usuario, y cada una
+# lleva cómo se dice en el veredicto. Visto en uso: una camisa de béisbol
+# salía «muy Preppy» y válida para Business Casual con americana.
+_INFORMAL = {"cargo": "cargo", "chandal": "de chándal", "deportiv": "deportiva",
+             "jogger": "jogger", "sudader": "de sudadera", "beisbol": "de béisbol",
+             "baseball": "de béisbol", "bolos": "de bolos", "bowling": "de bolos",
+             "hawaian": "hawaiana"}
+
+
+def _informal(tipo: str, e: dict, notas: str) -> str | None:
+    """Qué la delata como informal («de béisbol», «cargo»…), o None."""
+    if tipo == "jogger":
+        return "jogger"
     texto = _clave(str(e.get("descripcion") or "")) + " " + (notas or "")
-    return any(w in texto for w in _INFORMAL)
+    return next((v for w, v in _INFORMAL.items() if w in texto), None)
 
 
 def es_neutro(p: dict) -> bool:
@@ -295,6 +502,13 @@ def paleta_comun(pps: list[dict[int, int]]) -> int | None:
 def reglas_estilo(estilo: str, ps: list[dict]) -> tuple[float, list[str]] | None:
     """Reglas propias de cada estilo sobre el conjunto. None = no vale."""
     pts, por = 0.0, []
+    if any(_fuera_de_ventana(estilo, p) for p in ps):
+        return None
+    fs = [p["formalidad"] for p in ps if p.get("formalidad")]
+    if fs and max(fs) - min(fs) > SALTO_MAX:
+        return None
+    if estilo == "minimalista" and any(p.get("marcas", set()) & {"cargo", "roto"} for p in ps):
+        return None
     fuertes = [p for p in ps if p["estampado"] in ESTAMPADOS_FUERTES]
     if estilo == "casual":
         if len(fuertes) > 1:
@@ -320,7 +534,8 @@ def reglas_estilo(estilo: str, ps: list[dict]) -> tuple[float, list[str]] | None
         if not colores:
             pts += 1          # la razón («todo en neutros») ya la da armonia()
     elif estilo in ("smart_casual", "business_casual"):
-        if any(p["estampado"] in ("logo", "camuflaje", "estampado") for p in ps):
+        if any(p["estampado"] in ("camuflaje", "estampado")
+               or (p["estampado"] == "logo" and not p.get("logo_discreto")) for p in ps):
             return None
         # Ni chándal ni cargo: se ven en la descripción aunque el tipo diga
         # «pantalón» (visto en uso: joggers propuestos para Business Casual).
@@ -337,13 +552,17 @@ def reglas_estilo(estilo: str, ps: list[dict]) -> tuple[float, list[str]] | None
         if vaq:
             por.append("vaquero oscuro")
     elif estilo == "preppy":
-        if any(p["estampado"] == "camuflaje" for p in ps):
+        if any(p["estampado"] == "camuflaje" or p.get("informal")
+               or "volumen" in p.get("marcas", set()) for p in ps):
             return None
         if any(p["estampado"] in ("rayas", "cuadros") for p in ps):
             pts += 1
             por.append("rayas o cuadros")
         if any(p["estampado"] == "logo" for p in ps):
             pts -= 1
+    elif estilo == "grunge" and any(p["tipo"] == "camisa" and p["estampado"] in
+                                    ("estampado", "logo", "camuflaje") for p in ps):
+        return None
     elif estilo == "rocker":
         negros = sum(p["color"] == "negro" for p in ps)
         if not negros:
@@ -395,28 +614,52 @@ def _pide(p: dict, color_pedido: str | None) -> bool:
 
 def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
             con_encima: bool | None = None, solo_wada: bool = False,
-            n: int = 8, max_repeticion: int = 2, altura: int | None = None) -> dict:
+            n: int = 8, max_repeticion: int = 2, altura: int | None = None,
+            ancla: int | None = None, forzar: bool = False, semilla: int = 0) -> dict:
     """Outfits ordenados. Devuelve {"outfits": [...], "faltan": [...], "aviso": str|None}.
 
     Cada outfit: {"prendas": {posicion: índice en `prendas`}, "puntos",
     "razones": [...], "wada": nº de paleta o None}.
+
+    `ancla`: índice de una prenda que TIENE que estar en todos los outfits
+    (el usuario parte de ella). Si no encaja en el estilo, no sale nada salvo
+    con `forzar`: entonces se monta igual y las reglas del estilo se aplican
+    solo al resto. `semilla`: 0 = los mejores, en orden; otra = otra tanda de
+    propuestas, muestreadas en proporción a su puntuación (Gumbel top-k). La
+    misma semilla da la misma tanda: sigue siendo reproducible.
     """
     E = ESTILOS[estilo]
     if con_encima is None:
         con_encima = E["capa"] == "recomendado"
     umbral = umbral_wada()
     pps = paletas_por_prenda(prendas, umbral)
+    pa = prendas[ancla] if ancla is not None else None
+    if pa is not None and pa["posicion"] == "encima":
+        con_encima = True
 
     def afin(p, pos):
         return E[pos].get(p["tipo"], 0)
 
-    A = [p for p in prendas if p["posicion"] == "arriba" and afin(p, "arriba")]
-    B = [p for p in prendas if p["posicion"] == "abajo" and afin(p, "abajo")]
+    def vale(p, pos):
+        return afin(p, pos) or (forzar and p is pa)
+
+    A = [p for p in prendas if p["posicion"] == "arriba" and vale(p, "arriba")]
+    B = [p for p in prendas if p["posicion"] == "abajo" and vale(p, "abajo")]
     # Encima: lo guardado encima y lo que, por tipo, se lleva encima en este
     # estilo aunque esté guardado arriba (la sudadera de cremallera).
-    C = [p for p in prendas if afin(p, "encima")
+    C = [p for p in prendas if vale(p, "encima")
          and (p["posicion"] == "encima" or _etq.CAPA.get(p["tipo"], 0) >= 2
               or p["tipo"] == "camisa")]
+    if pa is not None:
+        # La prenda de partida ocupa su posición y no compite en otra.
+        if pa["posicion"] == "abajo":
+            B = [pa] if pa in B else []
+        elif pa["posicion"] == "encima":
+            C = [pa] if pa in C else []
+        else:
+            A = [pa] if pa in A else []
+        A = [p for p in A if p is pa or pa["posicion"] != "arriba"]
+        C = [p for p in C if p is not pa or pa["posicion"] == "encima"]
 
     faltan = []
     if not A:
@@ -433,7 +676,9 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
         return {"outfits": [], "faltan": faltan, "aviso": None}
 
     def puntuar(ps, afinidad):
-        r = reglas_estilo(estilo, ps)
+        # Forzada, la prenda de partida no cuenta para las reglas del estilo
+        # (ya se sabe que no las cumple): se juzga el resto.
+        r = reglas_estilo(estilo, [p for p in ps if not (forzar and p is pa)] or ps)
         if r is None:
             return None
         pr, por = r
@@ -475,6 +720,8 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
                         continue
                 elif _etq.CAPA.get(c["tipo"], 3) <= _etq.CAPA.get(a["tipo"], 1):
                     continue
+                if not capas_ok(a, c, b):
+                    continue
                 s = puntuar([a, b, c], afin(a, "arriba") + afin(b, "abajo") + afin(c, "encima"))
                 if s:
                     opciones.append((c, s))
@@ -488,21 +735,44 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
                                      **({"encima": c["i"]} if c else {})},
                          "puntos": round(float(s[0]), 2), "razones": s[1], "wada": s[2],
                          "_ids": tuple(p["id"] for p in ps)})
+    if pa is not None:
+        cand = [o for o in cand if pa["i"] in o["prendas"].values()]
     cand.sort(key=lambda o: (-o["puntos"], o["_ids"]))
+    if semilla:
+        ruido = np.random.default_rng(semilla).gumbel(size=len(cand))
+        orden = np.argsort([-(o["puntos"] + r) for o, r in zip(cand, ruido)], kind="stable")
+        cand = [cand[k] for k in orden]
 
-    # Variedad: una prenda sale como mucho `max_repeticion` veces, y no se
-    # repite el mismo arriba + abajo.
+    # Variedad: no se repite el mismo arriba + abajo, una paleta de Wada sale
+    # como mucho dos veces y, en dos pasadas, primero cada prenda una sola vez
+    # (la de partida no cuenta) para que ocho looks no sean los mismos
+    # vaqueros con otra camiseta; si no llega a `n`, se rellena permitiendo
+    # hasta `max_repeticion` usos.
     usos, pares, elegidos = defaultdict(int), set(), []
-    for o in cand:
-        ids = o["_ids"]
-        if ids[:2] in pares or any(usos[i] >= max_repeticion for i in ids):
-            continue
-        elegidos.append(o)
-        pares.add(ids[:2])
-        for i in ids:
-            usos[i] += 1
+    paletas = defaultdict(int)
+    vistos = set()
+    for tope in dict.fromkeys((1, max_repeticion)):
+        for o in cand:
+            ids = o["_ids"]
+            if (id(o) in vistos or ids[:2] in pares
+                    or any(usos[i] >= tope for i in ids if pa is None or i != pa["id"])
+                    or (o["wada"] and paletas[o["wada"]] >= 2)):
+                continue
+            if o["wada"]:
+                paletas[o["wada"]] += 1
+            elegidos.append(o)
+            vistos.add(id(o))
+            pares.add(ids[:2])
+            for i in ids:
+                usos[i] += 1
+            if len(elegidos) == n:
+                break
         if len(elegidos) == n:
             break
+    # El orden que ve el usuario sigue siendo el de la puntuación (o el del
+    # sorteo, con semilla), no el de la pasada en que entró cada look.
+    pos = {id(o): k for k, o in enumerate(cand)}
+    elegidos.sort(key=lambda o: pos[id(o)])
     for o in elegidos:
         o.pop("_ids")
     aviso = None
@@ -511,6 +781,96 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
                  + (" Prueba sin color." if color_pedido else "")
                  + (" Prueba sin limitarte al diccionario." if solo_wada else ""))
     return {"outfits": elegidos, "faltan": faltan, "aviso": aviso}
+
+
+# ---------------------------------------------------------------------------
+# ¿Encaja una prenda en un estilo?
+# ---------------------------------------------------------------------------
+
+LEGIBLE = {"pantalon": "pantalón", "cardigan": "cárdigan", "algodon": "algodón",
+           "sintetico": "sintético", "marron": "marrón", "jogger": "jogger"}
+POS_TEXTO = {"arriba": "arriba", "abajo": "abajo", "encima": "encima"}
+
+
+def _leg(t):
+    return LEGIBLE.get(t, t or "prenda")
+
+
+def _frase_informal(p: dict) -> str:
+    """«Camisa de béisbol», «Bermuda cargo», «Jogger»: la prenda y lo que la delata."""
+    t = _leg(p["tipo"]).capitalize()
+    if p["informal"] is True or p["informal"] == "jogger" or (
+            p["informal"] == "de sudadera" and p["tipo"] == "sudadera"):
+        return t
+    return f"{t} {p['informal']}"
+
+
+def _choca(estilo: str, p: dict) -> str | None:
+    """La regla del estilo que una prenda sola ya incumple, o None."""
+    nom = ESTILOS[estilo]["nombre"]
+    if estilo == "athleisure" and (p["tejido"] == "vaquero" or p["tipo"] == "vaquero"):
+        return "Athleisure es ropa deportiva: el vaquero no entra."
+    if estilo == "minimalista" and p["estampado"] != "liso":
+        return "Minimalista pide prendas lisas, sin estampado."
+    if estilo in ("smart_casual", "business_casual"):
+        if p.get("informal"):
+            return f"{_frase_informal(p)}: demasiado informal para {nom}."
+        if p["estampado"] in ("camuflaje", "estampado") or (
+                p["estampado"] == "logo" and not p.get("logo_discreto")):
+            return f"Un estampado grande o un logo no es de {nom}."
+        if p["tipo"] == "vaquero" and p["color"] not in ("negro", "gris oscuro", "azul marino"):
+            return f"En {nom}, el vaquero solo oscuro."
+        if estilo == "business_casual" and p.get("largo") == "corto":
+            return "Business Casual no lleva nada corto."
+    if estilo == "preppy" and p["estampado"] == "camuflaje":
+        return "El camuflaje no es Preppy."
+    if estilo == "preppy" and "volumen" in p.get("marcas", set()):
+        return f"{_leg(p['tipo']).capitalize()} de corte ancho: Preppy es de corte recto."
+    if estilo == "preppy" and p.get("informal"):
+        return f"{_frase_informal(p)}: Preppy es clásico, no deportivo."
+    if estilo == "minimalista" and p.get("marcas", set()) & {"cargo", "roto"}:
+        return f"{_leg(p['tipo']).capitalize()} {p.get('formal_por') or ''}".strip() \
+            + ": Minimalista pide líneas limpias, sin bolsillos cargo ni rotos."
+    fuera = _fuera_de_ventana(estilo, p)
+    if fuera:
+        return fuera
+    if estilo == "oversize" and p["corte"] != "holgado":
+        return "Oversize pide prendas holgadas, y esta no está marcada como holgada."
+    return None
+
+
+def _nivel(p: dict, estilo: str) -> int:
+    E = ESTILOS[estilo]
+    niveles = [E[p["posicion"]].get(p["tipo"], 0)]
+    if p["posicion"] == "arriba" and (_etq.CAPA.get(p["tipo"], 0) >= 2 or p["tipo"] == "camisa"):
+        niveles.append(E["encima"].get(p["tipo"], 0))
+    return 0 if _choca(estilo, p) else max(niveles)
+
+
+def encaje(p: dict, estilo: str) -> dict:
+    """Veredicto de una prenda para un estilo, con sus razones.
+
+    nivel 2 = muy del estilo, 1 = encaja, 0 = no encaja. `alternativas`: los
+    estilos en los que sí encaja, de más a menos propio. Son las mismas
+    reglas que montan los conjuntos: no hay un criterio aparte.
+    """
+    E = ESTILOS[estilo]
+    nivel = _nivel(p, estilo)
+    razones = []
+    motivo = _choca(estilo, p)
+    if motivo:
+        razones.append(motivo)
+    elif nivel == 0:
+        pide = sorted(E[p["posicion"]], key=lambda t: -E[p["posicion"]][t])[:3]
+        razones.append(f"{E['nombre']} no lleva {_leg(p['tipo'])} {POS_TEXTO[p['posicion']]}: "
+                       f"pide {', '.join(_leg(t) for t in pide)}.")
+    elif nivel == 2:
+        razones.append(f"Es una prenda muy de {E['nombre']}.")
+    else:
+        razones.append(f"Encaja en {E['nombre']}, aunque no es lo más propio del estilo.")
+    alternativas = sorted((k for k in ORDEN_ESTILOS if k != estilo and _nivel(p, k)),
+                          key=lambda k: -_nivel(p, k))
+    return {"nivel": nivel, "razones": razones, "alternativas": alternativas}
 
 
 # ---------------------------------------------------------------------------

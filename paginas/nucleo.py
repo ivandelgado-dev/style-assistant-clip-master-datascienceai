@@ -46,9 +46,10 @@ CIFRAS = [
     ("+0,0217", "NDCG@10 de la proyección supervisada sobre CLIP plano, en "
                 "atributos vistos. Significativo por bootstrap.",
      "resultados_modelado.md"),
-    ("26 / 100", "Aciertos en la banda de mayor proximidad, frente a 7 de cada "
-                 "100 sin ordenar. En atributos no vistos, 24.",
-     "resultados_calibracion.md"),
+    ("22 / 30", "Fotos de modelo en las que tu prenda exacta sale primera "
+                "entre 172. Con CLIP sin proyección, 19. Fotos nuevas, regla "
+                "escrita antes.",
+     "resultados_busqueda_modelo_producto.md"),
     ("1,000", "AUC separando fotografía de catálogo de fotografía de móvil. "
               "El nulo por composición está en 0,57–0,64.",
      "resultados_domain_gap.md"),
@@ -376,6 +377,15 @@ def rellenar_etiquetas_desde_cache(usuario_id: int) -> int:
             continue
         if e and e.get("piezas"):
             armario.guardar_etiquetas(BD_USUARIOS, usuario_id, pid, e["piezas"][0])
+            n += 1
+    # Rasgos de estilo (etiquetas.VERSION_RASGOS) ya pedidos para la misma foto.
+    for pid, foto in armario.sin_rasgos(BD_USUARIOS, usuario_id):
+        try:
+            r = etiquetas.rasgos_en_cache((DATOS / foto).read_bytes())
+        except OSError:
+            continue
+        if r:
+            armario.guardar_rasgos(BD_USUARIOS, usuario_id, pid, r)
             n += 1
     return n
 

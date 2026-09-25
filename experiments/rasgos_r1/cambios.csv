@@ -1,0 +1,9 @@
+﻿cuenta;id;tipo;sin_rasgos;con_rasgos;por;formalidad_ia;rasgos;descripcion;notas
+1;2;polo;4;2;de fantasía;2;grafico_grande,fantasia,manga_corta;Polo de punto a rayas con texto bordado.;polo
+1;17;polo;3;1;deportiva;1;deportiva,grafico_grande,fantasia;Polo negro de manga larga con banda azul central;camiseta manga larga
+1;45;camiseta;2;1;deportiva;1;deportiva,logo_discreto,manga_corta;Camiseta naranja de manga corta con logo redondo;camieseta manga corta
+1;73;bermuda;2;3;tipo chino;3;de_vestir;Bermuda de algodón beige con estampado de rayas verticales;pantalon tipo pirata
+1;81;bermuda;2;1;deportiva;1;deportiva,logo_discreto;Bermuda burdeos de algodón con cordón ajustable;pantalon corto con cintura elastica
+1;104;cazadora;3;1;deportiva;1;deportiva,logo_discreto;Cazadora bomber negra con forro acolchado.;cazadora tipo bomber
+1;106;camisa;4;5;de vestir;3;logo_discreto,de_vestir;Camisa lisa de manga larga en color azul marino.;camisa casual lisa
+1;108;camisa;4;5;de vestir;3;de_vestir;Camisa negra lisa con un bolsillo delantero.;camisa lisa casual
