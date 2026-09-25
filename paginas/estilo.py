@@ -793,6 +793,36 @@ CSS = """
   .ancla .d{font-size:11.5px;color:var(--muted);margin:2px 0 0 0;}
   /* ---- Por estilo: pasos numerados, hueco de prenda, lo opcional plegado */
   .st-key-est_panel [data-testid="stMarkdownContainer"]{margin-bottom:0 !important;}
+  /* «Press Enter to submit form»: Streamlit lo pinta en inglés ENCIMA del
+     texto que escribes (visto en uso). Las instrucciones sobran. */
+  [data-testid="InputInstructions"]{display:none !important;}
+  /* Botón secundario dentro de un formulario: Streamlit le pone otro
+     data-testid y salía redondeado y blanco. Igual que el resto. */
+  button[data-testid="stBaseButton-secondaryFormSubmit"]{
+    background:transparent !important;border:1px solid var(--ink) !important;
+    color:var(--ink) !important;border-radius:0 !important;box-shadow:none !important;
+    font-size:11px !important;letter-spacing:.6px;text-transform:uppercase;height:42px;}
+  button[data-testid="stBaseButton-secondaryFormSubmit"]:hover:not(:disabled){
+    background:var(--ink) !important;color:var(--base) !important;}
+  button[data-testid="stBaseButton-secondaryFormSubmit"]:disabled{opacity:.35;}
+  .st-key-est_panel div[data-testid="stTextArea"] textarea{
+       font-size:13px !important;line-height:19px !important;padding:10px 12px !important;
+       background:#fff !important;color:var(--ink) !important;}
+  .st-key-est_panel div[data-testid="stTextArea"] div[data-baseweb="textarea"]{
+       border:1px solid var(--line) !important;border-radius:10px !important;}
+  .st-key-est_panel div[data-testid="stTextArea"] div[data-baseweb="textarea"]:focus-within{
+       border-color:var(--burdeos) !important;}
+  /* Foto del autor y de perfil: redonda, en lugar del cuadro de iniciales. */
+  .ini.foto{width:104px;height:104px;border-radius:50%;overflow:hidden;background:var(--plate);}
+  .ini.foto img{width:100%;height:100%;object-fit:cover;display:block;}
+  /* «Por qué Akin»: una entrada de diccionario. */
+  .dicc{max-width:58ch;margin:0 auto;text-align:center;}
+  .dicc .lema{font-size:34px;font-weight:400;letter-spacing:.02em;margin:0;color:var(--ink);}
+  .dicc .fon{font-size:13px;color:var(--faint);margin:4px 0 0 0;letter-spacing:.3px;}
+  .dicc .gram{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--burdeos);
+       margin:14px 0 6px 0;}
+  .dicc .acep{font-size:15px;line-height:23px;color:var(--ink);margin:0;}
+  .dicc .acep i{color:var(--muted);}
   .paso-e{display:flex;align-items:center;gap:10px;margin:0 !important;padding:14px 0 0 0;font-size:11px;
        letter-spacing:.5px;text-transform:uppercase;font-weight:700;color:var(--ink);}
   .paso-e span{flex:0 0 22px;height:22px;border-radius:50%;border:1px solid var(--ink);

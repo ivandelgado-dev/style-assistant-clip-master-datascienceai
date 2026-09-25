@@ -124,6 +124,28 @@ def _elegir_prenda(arm, prendas: list[dict]):
                     st.rerun()
 
 
+def _con_palabras(clave: str) -> None:
+    """Petición en palabras: la IA la traduce a estilo, color y capa, que se
+    ven marcados abajo y se pueden cambiar. No elige ningún look."""
+    from paginas import gemini
+    with st.form(clave, clear_on_submit=False, border=False):
+        texto = st.text_area("Petición", placeholder="Una cena informal, algo en azul…",
+                             height=76, max_chars=200, label_visibility="collapsed")
+        enviar = st.form_submit_button("Traducir a opciones", use_container_width=True)
+    st.markdown('<p class="nota-form">La IA solo marca estilo, color y capa por ti; '
+                'los looks los eligen las reglas.</p>', unsafe_allow_html=True)
+    if enviar and texto.strip():
+        try:
+            r = outfits.interpretar_peticion(texto.strip())
+        except gemini.ErrorGemini as e:
+            st.warning(gemini.resumen_error(e))
+            return
+        if r and r.get("entendido"):
+            st.session_state["est_pendiente"] = r
+            st.rerun()
+        st.info("No lo he entendido como una petición de ropa.")
+
+
 def por_estilo(u: dict, arm, panel, res, pie):
     _aplicar_pendiente()
     prendas = outfits.prendas_de(arm)
@@ -161,7 +183,15 @@ def por_estilo(u: dict, arm, panel, res, pie):
                            use_container_width=True):
                 _elegir_prenda(arm, prendas)
 
-        st.markdown(_paso(3 if modo == "prenda" else 2, "Estilo"), unsafe_allow_html=True)
+        from paginas import gemini
+        hay_ia = gemini.disponible()
+        if modo == "libre" and hay_ia:
+            # Sin prenda de partida, decirlo con palabras es lo natural: va
+            # abierto y antes del estilo (visto en uso: plegado no se veía).
+            st.markdown(_paso(2, "Dímelo con palabras"), unsafe_allow_html=True)
+            _con_palabras("est_form_libre")
+        st.markdown(_paso(3 if modo == "prenda" or hay_ia else 2, "Estilo"),
+                    unsafe_allow_html=True)
         # Con una prenda elegida, los estilos donde encaja llevan una marca:
         # se ve de un vistazo antes de elegir.
         encajan = ({k for k in outfits.ORDEN_ESTILOS if outfits.encaje(pa, k)["nivel"]}
@@ -216,30 +246,10 @@ def por_estilo(u: dict, arm, panel, res, pie):
             st.markdown(f'<p class="nota-form">Activo: {" · ".join(activo)}</p>',
                         unsafe_allow_html=True)
 
-        # Con tus palabras: la IA lo traduce a las opciones de arriba.
-        from paginas import gemini
-        if gemini.disponible():
+        # Con una prenda elegida, la petición en palabras es secundaria.
+        if modo == "prenda" and hay_ia:
             with st.expander("Pídelo con tus palabras"):
-                with st.form("est_form", clear_on_submit=False, border=False):
-                    texto = st.text_input("Petición",
-                                          placeholder="Una cena informal, algo en azul…",
-                                          label_visibility="collapsed")
-                    enviar = st.form_submit_button("Traducir a opciones",
-                                                   use_container_width=True)
-                st.markdown('<p class="nota-form">La IA solo marca estilo, color y capa '
-                            'por ti; los looks los eligen las reglas.</p>',
-                            unsafe_allow_html=True)
-            if enviar and texto.strip():
-                try:
-                    r = outfits.interpretar_peticion(texto.strip())
-                except gemini.ErrorGemini as e:
-                    st.warning(gemini.resumen_error(e))
-                    r = None
-                if r and r.get("entendido"):
-                    st.session_state["est_pendiente"] = r
-                    st.rerun()
-                elif r is not None:
-                    st.info("No lo he entendido como una petición de ropa.")
+                _con_palabras("est_form")
 
     # ---------------------------------------------------------- resultados
     with res:

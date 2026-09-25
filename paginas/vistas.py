@@ -22,8 +22,8 @@ import numpy as np
 from PIL import Image
 
 from paginas import armario, auth, bienvenida, busqueda, cupula
-from paginas.nucleo import (BD_USUARIOS, CIFRAS, DIMENSIONES, armario_usuario,
-                            cargar_armario, exige_sesion,
+from paginas.nucleo import (BD_USUARIOS, CIFRAS, DATOS, DIMENSIONES, armario_usuario,
+                            cargar_armario, dato_uri, exige_sesion,
                             nube_para_cupula, usuario)
 
 # Rellenado por app.py: las páginas se necesitan para `st.switch_page`.
@@ -155,6 +155,23 @@ def inicio():
         'ocupa la más próxima a su vector real. Si tus prendas se concentran '
         'en una zona en vez de repartirse, eso es el salto de dominio que '
         'este trabajo mide.</p>',
+        unsafe_allow_html=True)
+
+    # Por qué el nombre: junto a la esfera, porque la esfera lo dibuja.
+    st.markdown(
+        '<div style="height:56px;"></div>'
+        '<div class="filete" style="margin:0 auto 22px auto;"></div>'
+        '<p class="seccion revela" style="text-align:center;">Por qué Akin</p>'
+        '<div class="dicc revela">'
+        '<p class="lema">akin</p>'
+        '<p class="fon">/əˈkɪn/ · del inglés <i>of kin</i>, «de la familia»</p>'
+        '<p class="gram">adjetivo</p>'
+        '<p class="acep">Emparentado; <i>de la misma familia</i>. Parecido.</p>'
+        '</div>'
+        '<p class="cuerpo revela" style="max-width:58ch;margin:18px auto 0 auto;'
+        'text-align:center;font-size:13.5px;line-height:21px;">Es lo que hace la '
+        'aplicación: busca en tu armario lo que es de la misma familia que la prenda '
+        'que te gusta. En la esfera de arriba, lo que es <i>akin</i> está cerca.</p>',
         unsafe_allow_html=True)
 
     st.markdown('<div style="height:64px;"></div>'
@@ -559,6 +576,15 @@ def futuro():
 # 5. SOBRE EL PROYECTO
 # ===========================================================================
 
+def _foto_autor() -> str:
+    """La foto del autor si está en data/autor.jpg (no se sube al repositorio:
+    data/ está excluido); si no, las iniciales."""
+    if (DATOS / "autor.jpg").exists():
+        return (f'<div class="ini foto"><img src="{dato_uri("autor.jpg", ancho=240)}" '
+                f'alt="Iván Delgado"></div>')
+    return '<div class="ini">ID</div>'
+
+
 def sobre():
     st.markdown('<div style="height:26px;"></div>'
                 '<div class="filete revela"></div>'
@@ -629,7 +655,7 @@ def sobre():
     with b:
         st.markdown(
             '<div class="caja revela">'
-            '<div class="ini">ID</div>'
+            + _foto_autor() +
             '<h3 class="revela" style="font-size:19px;font-weight:400;margin:18px 0 0 0;">'
             'Iván Delgado</h3>'
             '<p class="rot" style="margin-top:7px;">Autor · desarrollo, '
@@ -667,7 +693,11 @@ def _mi_cuenta():
 
     Qué se puede cambiar y qué no, y por qué:
 
-    - **Nombre**: sí. No identifica la cuenta, solo es cómo se te saluda.
+    - **Nombre y apellidos**: sí. No identifican la cuenta; solo letras,
+      espacios, guion y apóstrofo (`auth._texto_nombre`). Sin nombre de
+      usuario: se entra con el correo y otro identificador no aporta nada.
+    - **Foto de perfil**: opcional. Se recorta, se reduce a 400 px y se guarda
+      sin metadatos (`auth.guardar_foto`).
     - **Contraseña**: sí, exigiendo la actual. Ver `auth.cambiar_clave`.
     - **Correo**: no. Es la clave con la que se entra, y cambiarlo de forma
       segura exige verificar el nuevo correo, que esta versión no hace. Sin esa
@@ -711,7 +741,10 @@ def _mi_cuenta():
                     '<p class="rot-f revela" style="margin-bottom:4px;">Datos '
                     'personales</p>', unsafe_allow_html=True)
         with st.form("datos", border=False):
-            nombre = st.text_input("Nombre", value=d["nombre"], key="c_nombre")
+            nombre = st.text_input("Nombre", value=d["nombre"], key="c_nombre",
+                                   max_chars=auth.MAX_NOMBRE)
+            apellidos = st.text_input("Apellidos (opcional)", value=d.get("apellidos") or "",
+                                      key="c_apellidos", max_chars=auth.MAX_APELLIDOS)
             st.text_input("Correo", value=d["correo"], disabled=True,
                           key="c_correo")
             st.markdown('<p class="rot" style="margin-top:6px;'
@@ -722,9 +755,36 @@ def _mi_cuenta():
             st.markdown('<div style="height:10px;"></div>',
                         unsafe_allow_html=True)
             if st.form_submit_button("Guardar cambios", type="primary"):
-                ok, msg = auth.actualizar_nombre(BD_USUARIOS, d["id"], nombre)
+                ok, msg = auth.actualizar_perfil(BD_USUARIOS, d["id"], nombre, apellidos)
                 if ok:
-                    st.session_state["usuario"]["nombre"] = nombre.strip()
+                    st.session_state["usuario"]["nombre"] = " ".join(nombre.split())
+                st.session_state["aviso_cuenta"] = ("ok" if ok else "error", msg)
+                st.rerun()
+
+        st.markdown('<div style="height:34px;"></div>'
+                    '<p class="rot-f revela" style="margin-bottom:4px;">'
+                    'Foto de perfil (opcional)</p>', unsafe_allow_html=True)
+        with st.form("foto_perfil", border=False, clear_on_submit=True):
+            subida = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp"],
+                                      key="c_foto", label_visibility="collapsed")
+            st.markdown('<p class="nota-form" style="margin-top:6px;">JPG, PNG o WEBP, '
+                        'hasta 8 MB. Se recorta en cuadrado y se guarda sin los datos '
+                        'de la foto (ni ubicación ni móvil).</p>'
+                        '<div style="height:10px;"></div>', unsafe_allow_html=True)
+            f1, f2 = st.columns(2)
+            guardar_f = f1.form_submit_button("Guardar foto", type="primary",
+                                              use_container_width=True)
+            quitar_f = f2.form_submit_button("Quitar foto", use_container_width=True,
+                                             disabled=not d.get("foto"))
+            if guardar_f and subida is not None:
+                ok, msg = auth.guardar_foto(BD_USUARIOS, DATOS, d["id"], subida.getvalue())
+                st.session_state["aviso_cuenta"] = ("ok" if ok else "error", msg)
+                st.rerun()
+            elif guardar_f:
+                st.markdown('<p class="rot" style="color:var(--burdeos);">Elige una '
+                            'foto primero.</p>', unsafe_allow_html=True)
+            if quitar_f:
+                ok, msg = auth.quitar_foto(BD_USUARIOS, DATOS, d["id"])
                 st.session_state["aviso_cuenta"] = ("ok" if ok else "error", msg)
                 st.rerun()
 
@@ -757,7 +817,7 @@ def _mi_cuenta():
             repe = st.text_input("Repite la contraseña nueva", type="password",
                                  key="c_repe")
             st.markdown(f'<p class="rot" style="margin-top:6px;">Mínimo '
-                        f'{auth.MIN_CLAVE} caracteres</p>',
+                        f'{auth.MIN_CLAVE} caracteres, con letras y números</p>',
                         unsafe_allow_html=True)
             st.markdown('<div style="height:10px;"></div>',
                         unsafe_allow_html=True)
@@ -768,8 +828,14 @@ def _mi_cuenta():
                 st.rerun()
 
     with der:
-        partes = [x for x in d["nombre"].split() if x]
+        completo = " ".join(x for x in (d["nombre"], d.get("apellidos")) if x)
+        partes = [x for x in completo.split() if x]
         iniciales = "".join(x[0] for x in partes[:2]).upper() or "·"
+        if d.get("foto") and (DATOS / d["foto"]).exists():
+            avatar = (f'<div class="ini foto"><img src="{dato_uri(d["foto"], ancho=240)}" '
+                      f'alt=""></div>')
+        else:
+            avatar = f'<div class="ini">{_html.escape(iniciales)}</div>'
         creado = str(d.get("creado") or "")[:10]
         if len(creado) == 10:
             creado = f"{creado[8:10]}/{creado[5:7]}/{creado[:4]}"
@@ -779,9 +845,9 @@ def _mi_cuenta():
 
         st.markdown(
             '<div style="height:26px;"></div>'
-            f'<div class="caja revela"><div class="ini">{_html.escape(iniciales)}'
-            f'</div><h3 style="font-size:19px;font-weight:400;margin:18px 0 0 0;">'
-            f'{_html.escape(d["nombre"])}</h3>'
+            f'<div class="caja revela">{avatar}'
+            f'<h3 style="font-size:19px;font-weight:400;margin:18px 0 0 0;">'
+            f'{_html.escape(completo)}</h3>'
             f'<p class="rot" style="margin-top:7px;text-transform:none;'
             f'letter-spacing:.2px;">{_html.escape(d["correo"])}</p>'
             '<div style="height:16px;"></div>'
@@ -836,11 +902,15 @@ def acceso():
                             unsafe_allow_html=True)
                 if st.form_submit_button("Entrar", type="primary",
                                          use_container_width=True):
-                    u = auth.acceder(BD_USUARIOS, c, p)
+                    espera = auth.espera_bloqueo(c)
+                    u = None if espera else auth.acceder(BD_USUARIOS, c, p)
+                    espera = espera or auth.espera_bloqueo(c)
                     if u is None:
-                        st.markdown('<p class="rot" style="color:var(--burdeos);'
-                                    'margin-top:12px;">Correo o contraseña '
-                                    'incorrectos.</p>', unsafe_allow_html=True)
+                        txt = (f"Demasiados intentos con este correo. Prueba dentro "
+                               f"de {max(1, round(espera / 60))} min." if espera
+                               else "Correo o contraseña incorrectos.")
+                        st.markdown(f'<p class="rot" style="color:var(--burdeos);'
+                                    f'margin-top:12px;">{txt}</p>', unsafe_allow_html=True)
                     else:
                         st.session_state["usuario"] = u
                         st.switch_page(destino_tras_entrar(u))
@@ -849,17 +919,19 @@ def acceso():
             st.markdown('<div style="height:10px;"></div>',
                         unsafe_allow_html=True)
             with st.form("crear", border=False):
-                nom = st.text_input("Nombre", key="r_nombre")
+                nom = st.text_input("Nombre", key="r_nombre", max_chars=auth.MAX_NOMBRE)
+                ape = st.text_input("Apellidos (opcional)", key="r_apellidos",
+                                    max_chars=auth.MAX_APELLIDOS)
                 cor = st.text_input("Correo", key="r_correo")
                 cl1 = st.text_input("Contraseña", type="password", key="r_c1")
                 cl2 = st.text_input("Repite la contraseña", type="password",
                                     key="r_c2")
                 st.markdown(f'<p class="rot" style="margin-top:10px;">Mínimo '
-                            f'{auth.MIN_CLAVE} caracteres</p>',
+                            f'{auth.MIN_CLAVE} caracteres, con letras y números</p>',
                             unsafe_allow_html=True)
                 if st.form_submit_button("Crear cuenta", type="primary",
                                          use_container_width=True):
-                    err = auth.validar_registro(cor, nom, cl1, cl2)
+                    err = auth.validar_registro(cor, nom, cl1, cl2, ape)
                     if err:
                         st.markdown(f'<p class="rot" style="color:var(--burdeos);'
                                     f'margin-top:12px;">{_html.escape(err)}</p>',
@@ -870,7 +942,7 @@ def acceso():
                         primera = auth.cuantos(BD_USUARIOS) == 0
                         ok, msg = auth.registrar(
                             BD_USUARIOS, cor, nom, cl1,
-                            armario="propio" if primera else None)
+                            armario="propio" if primera else None, apellidos=ape)
                         if not ok:
                             st.markdown(f'<p class="rot" style="color:'
                                         f'var(--burdeos);margin-top:12px;">'
@@ -900,8 +972,10 @@ def acceso():
             '<p class="cuerpo revela"><b>Límites declarados.</b> La sesión no '
             'sobrevive a recargar la página: mantenerla exigiría una cookie '
             'firmada, y Streamlit no expone cookies sin un componente externo. '
-            'No hay recuperación de contraseña, verificación de correo ni '
-            'limitación de intentos. Cada cuenta tiene su propio armario y solo '
+            'No hay recuperación de contraseña ni verificación de correo: las dos '
+            'exigen enviar correos y quedan como trabajo futuro. Sí hay límite '
+            'de intentos: cinco fallos seguidos bloquean ese correo cinco '
+            'minutos. Cada cuenta tiene su propio armario y solo '
             've el suyo; una cuenta nueva empieza vacía y sube sus prendas '
             'desde Mi armario.</p></div>',
             unsafe_allow_html=True)
