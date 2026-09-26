@@ -385,3 +385,51 @@ def quitar_foto(bd: Path, datos: Path, idu: int) -> tuple[bool, str]:
     for vieja in (Path(datos) / f"usuarios/{int(idu)}").glob("perfil_*.jpg"):
         vieja.unlink(missing_ok=True)
     return True, "Foto quitada."
+
+
+def eliminar_cuenta(bd: Path, datos: Path, idu: int, clave: str) -> tuple[bool, str]:
+    """Elimina la cuenta y todo lo suyo, exigiendo la contraseña.
+
+    Qué se borra: la fila de la cuenta; su armario entero, sus outfits y sus
+    valoraciones (`armario.eliminar_armario`); su carpeta
+    data/usuarios/<id>/ (fotos subidas y de perfil); y lo que la IA dijo de
+    esas fotos en la caché (`etiquetas.olvidar`).
+    Qué NO se borra: las fotos del armario del autor si esta era la cuenta
+    que lo importó, porque son el conjunto de test del trabajo y viven fuera
+    de la carpeta del usuario. Sus filas sí se borran.
+
+    Pedir la contraseña es por lo mismo que al cambiarla: una sesión abierta
+    en un ordenador ajeno no debe bastar para borrar una cuenta.
+    """
+    import shutil
+    from paginas import armario, etiquetas
+    cx = _conexion(bd)
+    try:
+        fila = cx.execute("SELECT sal, clave FROM usuarios WHERE id = ?", (idu,)).fetchone()
+    finally:
+        cx.close()
+    if fila is None:
+        return False, "No se encuentra la cuenta."
+    if not hmac.compare_digest(_derivar(clave, fila[0]), fila[1]):
+        return False, "La contraseña no es correcta."
+    datos = Path(datos)
+    fotos = armario.eliminar_armario(bd, datos, idu)
+    carpeta = (datos / "usuarios" / str(int(idu))).resolve()
+    perfil = list(carpeta.glob("perfil_*.jpg")) if carpeta.exists() else []
+    contenido = []
+    for f in fotos + perfil:
+        try:
+            contenido.append(f.read_bytes())
+        except OSError:
+            pass
+    etiquetas.olvidar(contenido)
+    cx = _conexion(bd)
+    try:
+        with cx:
+            cx.execute("DELETE FROM usuarios WHERE id = ?", (idu,))
+    finally:
+        cx.close()
+    # Solo su carpeta, y solo si de verdad está dentro de data/usuarios/.
+    if carpeta.exists() and (datos / "usuarios").resolve() in carpeta.parents:
+        shutil.rmtree(carpeta, ignore_errors=True)
+    return True, "Cuenta eliminada."

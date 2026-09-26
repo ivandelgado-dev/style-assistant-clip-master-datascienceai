@@ -393,6 +393,40 @@ def guardar_etiquetas(bd: Path, usuario_id: int, prenda_id: int,
         cx.close()
 
 
+def eliminar_armario(bd: Path, datos_dir: Path, usuario_id: int) -> list[Path]:
+    """Borra TODO lo del usuario en las tablas del armario: prendas, sus
+    categorías, importaciones, outfits, sus prendas y sus valoraciones.
+
+    Devuelve las fotos SUBIDAS por el usuario (para purgar sus etiquetas de la
+    caché antes de borrarlas). Las importadas (el armario del autor) son el
+    conjunto de test del trabajo y viven fuera de su carpeta: no se tocan.
+    Las filas se borran en una sola transacción: o todo o nada.
+    """
+    uid = int(usuario_id)
+    cx = _conexion(bd)
+    try:
+        fotos = [datos_dir / f for (f,) in cx.execute(
+            "SELECT foto FROM prendas WHERE usuario_id = ? AND origen = 'subida'", (uid,))]
+        fotos += [datos_dir / f for (f,) in cx.execute(
+            "SELECT foto_b FROM prendas WHERE usuario_id = ? AND origen = 'subida'"
+            " AND foto_b IS NOT NULL", (uid,))]
+        with cx:
+            cx.execute("DELETE FROM feedback WHERE usuario_id = ? OR outfit_id IN"
+                       " (SELECT id FROM outfits WHERE usuario_id = ?)", (uid, uid))
+            cx.execute("DELETE FROM outfit_items WHERE outfit_id IN"
+                       " (SELECT id FROM outfits WHERE usuario_id = ?)", (uid,))
+            cx.execute("DELETE FROM outfit_items WHERE prenda_id IN"
+                       " (SELECT id FROM prendas WHERE usuario_id = ?)", (uid,))
+            cx.execute("DELETE FROM outfits WHERE usuario_id = ?", (uid,))
+            cx.execute("DELETE FROM prendas WHERE usuario_id = ?", (uid,))
+            cx.execute("DELETE FROM categorias_propias WHERE usuario_id = ?", (uid,))
+            cx.execute("DELETE FROM importaciones WHERE usuario_id = ?", (uid,))
+    finally:
+        cx.close()
+    carpeta = (datos_dir / "usuarios" / str(uid)).resolve()
+    return [f for f in fotos if carpeta in f.resolve().parents]
+
+
 def sin_rasgos(bd: Path, usuario_id: int) -> list[tuple[int, str]]:
     """(id, foto) de las prendas con etiquetas pero sin rasgos de estilo
     (etiquetas.VERSION_RASGOS): las de antes de existir los rasgos."""

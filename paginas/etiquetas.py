@@ -676,3 +676,19 @@ def analizar_rasgos(imagen: bytes, modelo: str | None = None) -> dict | None:
         return hit
     rasgos_lote([imagen], modelo, aviso=lambda *_: None)
     return rasgos_en_cache(imagen)
+
+
+def olvidar(imagenes: list[bytes]) -> int:
+    """Quita de la caché todo lo que se pidió sobre estas fotos (etiquetas,
+    rasgos, lo que sea): al eliminar una cuenta, lo que la IA dijo de sus
+    fotos tampoco se queda. Devuelve cuántas entradas se han quitado."""
+    huellas = {hashlib.sha1(im).hexdigest() for im in imagenes}
+    if not huellas:
+        return 0
+    c = _leer_cache()
+    fuera = [k for k in c if k.split("|", 1)[0] in huellas]
+    for k in fuera:
+        del c[k]
+    if fuera:
+        _guardar_cache(c)
+    return len(fuera)

@@ -79,8 +79,11 @@ _CSS = """
   .akin-bienv{position:fixed;inset:0;z-index:100000;background:#1C1B1A;
               display:flex;align-items:center;justify-content:center;
               overflow:hidden;}
+  /* -52.75 % y no -50 %: el vértice de la A del monograma está 13 px a la
+     derecha del centro de su lienzo (473 px de ancho, medido sobre el PNG).
+     Centrar el lienzo dejaba la A torcida respecto al nombre. */
   .akin-bienv .agua{position:absolute;left:50%;top:50%;height:74vh;
-                    width:auto;transform:translate(-50%,-50%);opacity:.07;
+                    width:auto;transform:translate(-52.75%,-50%);opacity:.07;
                     pointer-events:none;user-select:none;}
   .akin-bienv .centro{position:relative;text-align:center;color:#F7F3EC;
                       padding:0 24px;transform:translateY(-34px);}
@@ -115,8 +118,8 @@ _CSS = """
   @keyframes akin-sube{from{opacity:0;transform:translateY(22px);}
                        to{opacity:1;transform:none;}}
   @keyframes akin-aparece{from{opacity:0;}to{opacity:1;}}
-  @keyframes akin-agua{from{opacity:0;transform:translate(-50%,-47%) scale(.97);}
-                       to{opacity:.07;transform:translate(-50%,-50%);}}
+  @keyframes akin-agua{from{opacity:0;transform:translate(-52.75%,-47%) scale(.97);}
+                       to{opacity:.07;transform:translate(-52.75%,-50%);}}
   @keyframes akin-fuera{to{opacity:0;visibility:hidden;}}
 
   @media (prefers-reduced-motion: reduce){

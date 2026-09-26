@@ -118,6 +118,25 @@ with acc:
 
 st.markdown('<div class="regla-fuerte"></div>', unsafe_allow_html=True)
 
+# Con foto de perfil, la foto sustituye al icono de persona del enlace de la
+# cuenta. `st.page_link` solo acepta iconos, así que se hace con CSS: se oculta
+# el icono y se pinta la foto (reducida a 64 px) delante del nombre.
+if u:
+    from paginas import auth
+    from paginas.nucleo import BD_USUARIOS, DATOS, dato_uri
+    _foto = (auth.datos(BD_USUARIOS, u["id"]) or {}).get("foto")
+    if _foto and (DATOS / _foto).exists():
+        st.markdown(
+            '<style>'
+            'div[data-testid="stPageLink"] a[href="acceso"] span[data-testid="stIconMaterial"]'
+            '{display:none !important;}'
+            'div[data-testid="stPageLink"] a[href="acceso"]'
+            '{justify-content:flex-start !important;gap:0 !important;}'
+            'div[data-testid="stPageLink"] a[href="acceso"]::before{content:"";'
+            'width:22px;height:22px;border-radius:50%;flex:0 0 22px;margin-right:8px;'
+            f'background:url("{dato_uri(_foto, ancho=64)}") center/cover;}}'
+            '</style>', unsafe_allow_html=True)
+
 # ---- estado activo de la navegación ---------------------------------------
 # No se puede resolver solo con CSS. Streamlit 1.64 no pone `aria-current` en
 # st.page_link, y el `href` vacío no marca la página ACTIVA sino la página por
@@ -128,10 +147,15 @@ st.markdown('<div class="regla-fuerte"></div>', unsafe_allow_html=True)
 # actual, y `Page.url_path` devuelve exactamente el mismo valor que acaba en el
 # atributo href ("" para la página por defecto). Así que la regla se emite
 # apuntando a ese href concreto en cada recarga.
+#
+# La marca de la página activa NO es un subrayado aparte: es un tramo de 2 px
+# que se asienta SOBRE la línea de la barra (::after, colocado a la altura
+# medida de esa línea). Antes eran dos líneas paralelas: el subrayado y, 7 px
+# más abajo, la regla.
 st.markdown(
     f'<style>'
-    f'div[data-testid="stPageLink"] a[href="{pg.url_path}"]{{'
-    f'  border-bottom-color:var(--ink) !important;}}'
+    f'div[data-testid="stPageLink"] a[href="{pg.url_path}"]::after{{'
+    f'  background:var(--ink) !important;}}'
     f'div[data-testid="stPageLink"] a[href="{pg.url_path}"] p{{'
     f'  color:var(--ink) !important;font-weight:700 !important;}}'
     f'</style>', unsafe_allow_html=True)

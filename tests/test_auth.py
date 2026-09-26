@@ -101,6 +101,53 @@ auth.quitar_foto(BD, tmp, 1)
 check("quitar: sin foto y sin fichero", auth.datos(BD, 1)["foto"] is None
       and not list((tmp / "usuarios/1").glob("perfil_*.jpg")))
 
+print("\n=== 7. Eliminar cuenta ===")
+import json  # noqa: E402
+import numpy as np  # noqa: E402
+from paginas import armario, etiquetas  # noqa: E402
+etiquetas.CACHE = tmp / "cache.json"
+BD2, D2 = tmp / "u2.db", tmp / "d2"
+auth.registrar(BD2, "a@x.es", "Ana", "clave123")
+auth.registrar(BD2, "b@x.es", "Beto", "clave123")
+vec = lambda _b: np.ones(armario.DIM, np.float32)  # noqa: E731
+
+
+def jpg(color):
+    b = io.BytesIO()
+    Image.new("RGB", (300, 300), color).save(b, "JPEG")
+    return b.getvalue()
+
+
+pa = armario.anadir(BD2, D2, 1, "camiseta", "arriba", jpg("red"), vec)
+pb = armario.anadir(BD2, D2, 1, "vaquero", "abajo", jpg("blue"), vec)
+qb = armario.anadir(BD2, D2, 2, "camiseta", "arriba", jpg("green"), vec)
+qc = armario.anadir(BD2, D2, 2, "vaquero", "abajo", jpg("white"), vec)
+armario.valorar_outfit(BD2, 1, {"arriba": pa, "abajo": pb}, 1, estilo="casual")
+armario.valorar_outfit(BD2, 2, {"arriba": qb, "abajo": qc}, -1, estilo="casual")
+auth.guardar_foto(BD2, D2, 1, jpg("black"))
+fotos_a = [D2 / f["foto"] for f in armario.listar(BD2, 1)[1]]
+etiquetas.CACHE.write_text(json.dumps({
+    f"{__import__('hashlib').sha1(fotos_a[0].read_bytes()).hexdigest()}|e1|m": {"x": 1},
+    "otra|e1|m": {"x": 2}}), encoding="utf-8")
+check("con la contraseña mal: no se borra nada",
+      not auth.eliminar_cuenta(BD2, D2, 1, "mala1234")[0] and auth.datos(BD2, 1) is not None
+      and armario.contar(BD2, 1) == 2)
+ok, _ = auth.eliminar_cuenta(BD2, D2, 1, "clave123")
+check("con la buena: se elimina", ok and auth.datos(BD2, 1) is None)
+check("su armario, fuera", armario.contar(BD2, 1) == 0)
+check("su carpeta (fotos y perfil), fuera", not (D2 / "usuarios/1").exists())
+import sqlite3  # noqa: E402
+cx = sqlite3.connect(BD2)
+n_out = cx.execute("SELECT COUNT(*) FROM outfits WHERE usuario_id = 1").fetchone()[0]
+n_fb = cx.execute("SELECT COUNT(*) FROM feedback WHERE usuario_id = 1").fetchone()[0]
+n_otro = cx.execute("SELECT COUNT(*) FROM feedback WHERE usuario_id = 2").fetchone()[0]
+cx.close()
+check("sus outfits y valoraciones, fuera", n_out == 0 and n_fb == 0)
+check("lo que la IA dijo de sus fotos, fuera de la caché",
+      list(json.loads(etiquetas.CACHE.read_text(encoding="utf-8"))) == ["otra|e1|m"])
+check("la otra cuenta, intacta", auth.datos(BD2, 2) is not None and armario.contar(BD2, 2) == 2
+      and n_otro == 1 and (D2 / "usuarios/2").exists())
+
 print()
 if fallos:
     print(f"FALLAN {len(fallos)}: {fallos}")

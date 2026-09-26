@@ -102,6 +102,9 @@ def _celdas(clase: str, trozos: list[str]) -> str:
 # ===========================================================================
 
 def inicio():
+    aviso = st.session_state.pop("aviso_global", None)
+    if aviso:
+        st.toast(aviso)
     _, arm = cargar_armario()
     n = len(arm) if arm is not None else 0
 
@@ -125,8 +128,10 @@ def inicio():
     V_u = armario_usuario(u["id"])[0] if u else None
     malla, rellenar, explicada = nube_para_cupula(V_u)
     if malla:
-        st.markdown('<div style="height:70px;"></div>', unsafe_allow_html=True)
-        componentes.html(cupula.html(malla, rellenar, alto=520), height=528)
+        # Sin separador: el lienzo ya trae ~50 px vacíos encima de la cúpula,
+        # así que no se solapa con el botón (antes había 135 px de hueco).
+        with st.container(key="cupula_ini"):
+            componentes.html(cupula.html(malla, rellenar, alto=520), height=528)
         if rellenar:
             pie_fig = (f'{len(rellenar)} posiciones rellenas, una por prenda '
                        f'de tu armario · cada prenda ocupa la más próxima a su '
@@ -140,39 +145,39 @@ def inicio():
         st.markdown(f'<p class="marca-agua">{pie_fig}</p>',
                     unsafe_allow_html=True)
 
+    # Las dos ideas que hay detrás, una junto a la otra y a todo lo ancho:
+    # la forma (por qué una esfera) y el nombre (por qué Akin). Son la misma
+    # idea dicha dos veces: parecerse es estar cerca. Antes eran dos párrafos
+    # centrados, uno debajo del otro, que dejaban media pantalla vacía.
     st.markdown(
-        '<div style="height:52px;"></div>'
-        '<div class="filete" style="margin:0 auto 22px auto;"></div>'
-        '<p class="seccion revela" style="text-align:center;">Por qué una esfera</p>'
-        '<p class="cuerpo revela" style="max-width:58ch;margin:0 auto;'
-        'text-align:center;font-size:13.5px;line-height:21px;">'
-        'Los vectores de este sistema están normalizados: cada prenda tiene '
-        'norma 1, así que todas viven sobre la superficie de una esfera. La '
-        'similitud coseno con la que se ordenan los resultados es el coseno '
-        'del ángulo entre dos puntos de esa superficie. La figura de arriba es '
-        'esa esfera. Las posiciones forman un retículo uniforme, que es '
-        'estructura; lo que es dato es cuáles se rellenan, porque cada prenda '
-        'ocupa la más próxima a su vector real. Si tus prendas se concentran '
-        'en una zona en vez de repartirse, eso es el salto de dominio que '
-        'este trabajo mide.</p>',
-        unsafe_allow_html=True)
-
-    # Por qué el nombre: junto a la esfera, porque la esfera lo dibuja.
-    st.markdown(
-        '<div style="height:56px;"></div>'
-        '<div class="filete" style="margin:0 auto 22px auto;"></div>'
-        '<p class="seccion revela" style="text-align:center;">Por qué Akin</p>'
-        '<div class="dicc revela">'
-        '<p class="lema">akin</p>'
-        '<p class="fon">/əˈkɪn/ · del inglés <i>of kin</i>, «de la familia»</p>'
-        '<p class="gram">adjetivo</p>'
-        '<p class="acep">Emparentado; <i>de la misma familia</i>. Parecido.</p>'
-        '</div>'
-        '<p class="cuerpo revela" style="max-width:58ch;margin:18px auto 0 auto;'
-        'text-align:center;font-size:13.5px;line-height:21px;">Es lo que hace la '
-        'aplicación: busca en tu armario lo que es de la misma familia que la prenda '
-        'que te gusta. En la esfera de arriba, lo que es <i>akin</i> está cerca.</p>',
-        unsafe_allow_html=True)
+        '<div style="height:72px;"></div>'
+        '<section class="ideas revela">'
+        '<article class="idea">'
+        '<p class="idx">01 · La forma</p>'
+        '<div class="cuerpo-idea"><div>'
+        '<p class="grande"><i>cos</i> θ</p>'
+        '<p class="sub">‖ v ‖ = 1 para cada prenda</p></div><div>'
+        '<h3>Por qué una esfera</h3>'
+        '<p class="txt">Cada prenda es un vector de norma 1, así que todas viven '
+        'sobre la superficie de una esfera. Parecerse es estar cerca: la similitud '
+        'con la que se ordenan los resultados es el coseno del ángulo entre dos '
+        'puntos. El retículo es estructura; lo que es dato es qué posiciones se '
+        'rellenan, una por prenda. Si tus prendas se amontonan en una zona, eso es '
+        'el salto de dominio que mide este trabajo.</p>'
+        '</div></div></article>'
+        '<article class="idea">'
+        '<p class="idx">02 · El nombre</p>'
+        '<div class="cuerpo-idea"><div>'
+        '<p class="grande">akin</p>'
+        '<p class="sub">/əˈkɪn/ · adjetivo<br>del inglés <i>of kin</i>, «de la familia»</p>'
+        '</div><div>'
+        '<h3>Por qué Akin</h3>'
+        '<p class="txt">Emparentado, de la misma familia: parecido. Es lo que hace la '
+        'aplicación. Buscas una prenda que te gusta y Akin encuentra en tu armario '
+        'las que son de su familia. En la esfera de arriba, lo que es <i>akin</i> '
+        'está cerca: las dos ideas son la misma.</p>'
+        '</div></div></article>'
+        '</section>', unsafe_allow_html=True)
 
     st.markdown('<div style="height:64px;"></div>'
                 '<div class="filete revela" style="margin-bottom:14px;"></div>'
@@ -526,7 +531,7 @@ def futuro():
                 'que sí está hecho.</p><div style="height:34px;"></div>',
                 unsafe_allow_html=True)
 
-    for titulo, estado, texto in [
+    for n_fila, (titulo, estado, texto) in enumerate([
         ("Medir los conjuntos por estilo", "En marcha · recogiendo datos",
          "Hoy los monta un conjunto de reglas escritas. Cada «me lo pondría» "
          "y «no me convence» se guarda con el conjunto y el estilo pedido: con "
@@ -556,16 +561,13 @@ def futuro():
          "aumentar los datos de entrenamiento con fotografía de prenda "
          "extendida, o adaptar el dominio con una transformación aprendida "
          "entre ambos tipos de imagen."),
-    ]:
+    ], 1):
+        # Número · título · texto · estado, a todo lo ancho. Antes el texto
+        # acababa a mitad de pantalla y la otra mitad quedaba vacía.
         st.markdown(
-            f'<div class="revela" style="border-top:1px solid var(--line);'
-            f'padding:20px 0 22px 0;display:flex;gap:40px;'
-            f'align-items:flex-start;">'
-            f'<div style="flex:0 0 250px;">'
-            f'<h3 style="font-size:16px;font-weight:400;margin:0;">{titulo}</h3>'
-            f'<p class="rot" style="margin-top:7px;">{estado}</p></div>'
-            f'<p class="cuerpo revela" style="margin:0;max-width:62ch;">{texto}</p>'
-            f'</div>', unsafe_allow_html=True)
+            f'<div class="fila-futuro revela"><span class="n">{n_fila:02d}</span>'
+            f'<h3>{titulo}</h3><p class="t">{texto}</p>'
+            f'<p class="e">{estado}</p></div>', unsafe_allow_html=True)
     st.markdown(_nav(3),
                 unsafe_allow_html=True)
 
@@ -594,9 +596,11 @@ def sobre():
 
     a, b = st.columns([1.3, 1], gap="large")
     with a:
+        # Los dos párrafos lado a lado: uno debajo del otro, a 62ch, dejaban
+        # media columna vacía en pantallas anchas.
         st.markdown(
-            '<p class="cuerpo revela" style="max-width:62ch;font-size:13.5px;'
-            'line-height:21px;">Este sistema es el Trabajo de Fin de Máster '
+            '<div class="dos-parrafos revela">'
+            '<p class="cuerpo">Este sistema es el Trabajo de Fin de Máster '
             'del Máster en Data Science y Desarrollo de IA de Evolve Academy. '
             'La pregunta de partida era si se puede consultar el parecido '
             'entre prendas <b>por atributo</b> — parécete al corte, ignora el '
@@ -606,14 +610,13 @@ def sobre():
             # palabras, la seccion "Que aporta cada pieza" de la pagina de
             # Resultados. Se queda solo el giro del proyecto, que es contexto
             # y no resultado, y el numero vive en su pagina.
-            '<p class="cuerpo revela" style="max-width:62ch;margin-top:14px;'
-            'font-size:13.5px;line-height:21px;">A mitad de camino, la '
+            '<p class="cuerpo">A mitad de camino, la '
             'aportación principal cambió: pasó a ser la medición del salto '
             'entre fotografía de catálogo y fotografía real de armario. No fue '
             'una salida improvisada — estaba previsto por escrito desde antes '
             'de tener el primer número, como plan alternativo si la '
             'contribución original no ganaba. No ganó, y el plan se ejecutó.'
-            '</p>',
+            '</p></div>',
             unsafe_allow_html=True)
 
         st.markdown('<div style="height:32px;"></div>'
@@ -645,8 +648,9 @@ def sobre():
                         unsafe_allow_html=True)
 
         st.markdown(
-            '<div class="aviso revela" style="margin-top:18px;max-width:64ch;">'
-            '<p class="cuerpo revela">Las imágenes de los conjuntos de datos no se '
+            '<div class="aviso revela" style="margin-top:40px;max-width:72ch;">'
+            '<p class="cuerpo revela" style="font-size:14.5px;line-height:23px;">'
+            'Las imágenes de los conjuntos de datos no se '
             'redistribuyen: el repositorio excluye <code>data/</code> desde el '
             'primer commit. La licencia no declarada de una de las fuentes '
             'queda registrada como riesgo y no sería asumible en un uso '
@@ -687,6 +691,46 @@ def sobre():
 # ===========================================================================
 # 6. ACCESO
 # ===========================================================================
+
+@st.dialog("Eliminar la cuenta")
+def _dialogo_eliminar(d: dict):
+    """¿Seguro? con contraseña y casilla. Ver auth.eliminar_cuenta."""
+    propio = d.get("armario") == "propio"
+    st.markdown(
+        '<p class="cuerpo" style="font-size:13.5px;line-height:21px;margin:0 0 10px 0;">'
+        'Se borra <b>todo</b> y no se puede deshacer:</p>'
+        '<p class="cuerpo" style="font-size:13px;line-height:21px;margin:0;">'
+        '· tu cuenta y tus datos<br>· tu armario, con las fotos que subiste<br>'
+        '· tus outfits valorados<br>· tu foto de perfil<br>'
+        '· lo que la IA describió de tus fotos</p>'
+        '<div style="height:14px;"></div>'
+        + ('<p class="nota-form" style="margin-top:10px;">Esta cuenta tiene el armario '
+           'del autor. Sus fotos originales no se borran: son el conjunto de test del '
+           'trabajo.</p>' if propio else ''),
+        unsafe_allow_html=True)
+    with st.container(key="dlg_eliminar"), st.form("eliminar", border=False):
+        clave = st.text_input("Tu contraseña", type="password", key="el_clave")
+        conf = st.checkbox("Entiendo que no se puede deshacer", key="el_conf")
+        c1, c2 = st.columns(2)
+        cancelar = c1.form_submit_button("Cancelar", use_container_width=True)
+        borrar = c2.form_submit_button("Eliminar", type="primary", use_container_width=True)
+    if cancelar:
+        st.rerun()
+    if borrar:
+        if not conf:
+            st.markdown('<p class="rot" style="color:var(--burdeos);">Marca la casilla '
+                        'para confirmar.</p>', unsafe_allow_html=True)
+            return
+        ok, msg = auth.eliminar_cuenta(BD_USUARIOS, DATOS, d["id"], clave)
+        if not ok:
+            st.markdown(f'<p class="rot" style="color:var(--burdeos);">'
+                        f'{_html.escape(msg)}</p>', unsafe_allow_html=True)
+            return
+        for k in list(st.session_state.keys()):
+            del st.session_state[k]
+        st.session_state["aviso_global"] = "Tu cuenta y todo lo suyo se han eliminado."
+        st.switch_page(PAGINAS["inicio"])
+
 
 def _mi_cuenta():
     """Página de cuenta: datos personales, contraseña y cierre de sesión.
@@ -865,6 +909,11 @@ def _mi_cuenta():
                           "arm_k", "arm_hechas", "arm_filtro"):
                 st.session_state.pop(clave, None)
             st.rerun()
+        # Mismo botón que «Cerrar sesión», en burdeos y separado: se reconoce
+        # como botón, y como el único que destruye algo.
+        st.markdown('<div style="height:22px;"></div>', unsafe_allow_html=True)
+        if st.button("Eliminar mi cuenta", key="c_eliminar", use_container_width=True):
+            _dialogo_eliminar(d)
 
     pie()
 
@@ -1047,7 +1096,7 @@ def buscar():
 
     with panel:
         st.markdown('<div class="panel-busqueda"></div>'
-                    '<p class="rot-f" style="margin-bottom:6px;">Tu foto</p>',
+                    '<p class="rot-f" style="margin-bottom:12px;">Tu foto</p>',
                     unsafe_allow_html=True)
         subida = st.file_uploader("Foto de referencia",
                                   type=["jpg", "jpeg", "png", "webp"],

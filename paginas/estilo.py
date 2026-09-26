@@ -46,9 +46,16 @@ CSS = """
   iframe{border:none;background:transparent;}
 
   /* ---- barra superior (estructura de Evolve, reglas de Zara) --------- */
-  .marca{height:42px;display:flex;align-items:center;}
+  /* El logo, a la altura del texto de los enlaces (medido en el DOM: con 42px
+     de caja quedaba 12px más bajo que las palabras de la barra). */
+  /* margin-top: medido en el DOM, el logo quedaba 12,5 px más bajo que las
+     palabras de la barra (la columna del logo y la de los enlaces no miden
+     lo mismo). Con -25 px los centros coinciden a medio píxel. */
+  .marca{height:42px;display:flex;align-items:center;margin-top:-25px;}
   .marca img{height:19px;width:auto;display:block;}
-  .regla-fuerte{height:1px;background:var(--ink);margin:0 0 4px 0;}
+  /* margin-top -8 px: medido, las palabras de la barra quedaban a 26 px del
+     borde de arriba y a 34 px de la línea; así el aire es el mismo. */
+  .regla-fuerte{height:1px;background:var(--ink);margin:-8px 0 12px 0;}
   .regla{height:1px;background:var(--line);}
 
   /* El subrayado va en el <a> y no en el contenedor: asi abraza la palabra
@@ -57,8 +64,13 @@ CSS = """
   div[data-testid="stPageLink"] a{
     padding:0 0 7px 0 !important;background:transparent !important;
     border-radius:0 !important;width:fit-content !important;
-    border-bottom:2px solid transparent !important;
-    transition:border-color .2s ease;}
+    border-bottom:2px solid transparent !important;position:relative;}
+  /* El tramo que marca la página: -8.6 px lleva su borde inferior justo al de
+     la línea de la barra (medido en el DOM), así que se funde con ella. Al
+     pasar el ratón, el mismo tramo en gris. La activa la pinta app.py. */
+  div[data-testid="stPageLink"] a::after{content:"";position:absolute;left:0;right:0;
+    bottom:-8.6px;height:2px;background:transparent;transition:background .2s ease;}
+  div[data-testid="stPageLink"] a:hover::after{background:var(--line);}
   /* El subrayado de la pestana activa NO se decide aqui: Streamlit no marca
      cual esta activa en el DOM. La regla la emite app.py en cada recarga,
      apuntando al href de la pagina actual. Ver el comentario de alli. */
@@ -748,7 +760,8 @@ CSS = """
   .st-key-b_foto [data-testid="stFileUploaderDropzone"]:not(:has([data-testid="stFileChips"])):hover{
        border-color:var(--ink);background:var(--base);}
   .st-key-b_foto [data-testid="stFileUploaderDropzone"]:not(:has([data-testid="stFileChips"]))::before{
-       content:"Arrastra aquí la foto";font-size:14px;color:var(--ink);font-weight:600;}
+       content:"Arrastra aquí la foto";font-size:15px;color:var(--ink);font-weight:600;
+       font-family:"Source Sans","Source Sans 3","Source Sans Pro",sans-serif;}
   .st-key-b_foto [data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p{
        font-size:0 !important;}
   .st-key-b_foto [data-testid="stFileUploaderDropzone"] button [data-testid="stMarkdownContainer"] p::after{
@@ -815,14 +828,62 @@ CSS = """
   /* Foto del autor y de perfil: redonda, en lugar del cuadro de iniciales. */
   .ini.foto{width:104px;height:104px;border-radius:50%;overflow:hidden;background:var(--plate);}
   .ini.foto img{width:100%;height:100%;object-fit:cover;display:block;}
-  /* «Por qué Akin»: una entrada de diccionario. */
-  .dicc{max-width:58ch;margin:0 auto;text-align:center;}
-  .dicc .lema{font-size:34px;font-weight:400;letter-spacing:.02em;margin:0;color:var(--ink);}
-  .dicc .fon{font-size:13px;color:var(--faint);margin:4px 0 0 0;letter-spacing:.3px;}
-  .dicc .gram{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--burdeos);
-       margin:14px 0 6px 0;}
-  .dicc .acep{font-size:15px;line-height:23px;color:var(--ink);margin:0;}
-  .dicc .acep i{color:var(--muted);}
+  /* Inicio · las dos ideas (la esfera y el nombre), a dos columnas. */
+  .ideas{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink);
+         border-bottom:1px solid var(--line);}
+  .ideas .idea{padding:44px 56px 50px 0;}
+  .ideas .idea + .idea{padding:44px 0 50px 56px;border-left:1px solid var(--line);}
+  .ideas .idx{font-size:11px;letter-spacing:.9px;text-transform:uppercase;
+              color:var(--burdeos);margin:0;}
+  .ideas .grande{font-size:clamp(64px,7.5vw,112px);line-height:1;font-weight:300;
+                 letter-spacing:-.03em;color:var(--ink);margin:30px 0 0 0;}
+  .ideas .grande i{font-style:italic;color:var(--muted);}
+  .ideas .sub{font-size:13px;color:var(--faint);margin:14px 0 0 0;letter-spacing:.2px;}
+  .ideas h3{font-size:19px;font-weight:400;margin:34px 0 0 0;color:var(--ink);}
+  .ideas .txt{font-size:15.5px;line-height:25px;color:var(--muted);margin:10px 0 0 0;
+              max-width:62ch;text-wrap:pretty;}
+  /* Dentro de cada idea: la palabra grande a la izquierda y el texto a la
+     derecha, para que la columna se llene en pantallas anchas. */
+  .ideas .cuerpo-idea{display:grid;grid-template-columns:minmax(220px,.8fr) 1.2fr;
+       gap:40px;align-items:end;}
+  .ideas .cuerpo-idea h3{margin-top:30px;}
+  @media (max-width:1500px){
+    .ideas .cuerpo-idea{grid-template-columns:1fr;gap:0;}
+    .ideas .cuerpo-idea h3{margin-top:34px;}
+  }
+  .st-key-cupula_ini{margin-top:-16px;}
+  /* Sobre el proyecto: dos párrafos lado a lado. */
+  .dos-parrafos{display:grid;grid-template-columns:1fr 1fr;gap:44px;}
+  .dos-parrafos p.cuerpo{font-size:14.5px;line-height:23px;margin:0;max-width:60ch;}
+  @media (max-width:1100px){.dos-parrafos{grid-template-columns:1fr;gap:14px;}}
+  /* Futuro: una fila por idea, a todo lo ancho. */
+  .fila-futuro{display:grid;grid-template-columns:48px minmax(220px,1fr) 2.2fr minmax(180px,.9fr);
+       gap:32px;align-items:baseline;border-top:1px solid var(--line);padding:24px 0 26px 0;}
+  .fila-futuro .n{font-size:11px;color:var(--burdeos);letter-spacing:.6px;}
+  .fila-futuro h3{font-size:17px;font-weight:400;margin:0;color:var(--ink);}
+  .fila-futuro .t{font-size:15px;line-height:24px;color:var(--muted);margin:0;max-width:72ch;}
+  .fila-futuro .e{font-size:11px;letter-spacing:.5px;text-transform:uppercase;
+       color:var(--faint);margin:0;text-align:right;}
+  @media (max-width:1000px){
+    .fila-futuro{grid-template-columns:36px 1fr;}
+    .fila-futuro .t, .fila-futuro .e{grid-column:2;text-align:left;}
+  }
+  @media (max-width:820px){
+    .ideas{grid-template-columns:1fr;}
+    .ideas .idea, .ideas .idea + .idea{padding:34px 0;border-left:none;}
+    .ideas .idea + .idea{border-top:1px solid var(--line);}
+  }
+  /* Eliminar cuenta: el botón que borra, en burdeos, nunca en tinta. */
+  .st-key-dlg_eliminar button[data-testid="stBaseButton-primaryFormSubmit"]{
+       background:var(--burdeos) !important;border-color:var(--burdeos) !important;}
+  /* «Tu foto» y su caja: Streamlit pone -16 px bajo cada bloque de texto y
+     la etiqueta quedaba a 5 px de la caja; así queda a ~12 px. */
+  div[data-testid="stMarkdownContainer"]:has(.panel-busqueda){margin-bottom:-10px !important;}
+  .st-key-c_eliminar button{border-color:var(--burdeos) !important;
+       color:var(--burdeos) !important;}
+  .st-key-c_eliminar button p{color:var(--burdeos) !important;}
+  .st-key-c_eliminar button:hover{background:var(--burdeos) !important;}
+  .st-key-c_eliminar button:hover p{color:var(--base) !important;}
   .paso-e{display:flex;align-items:center;gap:10px;margin:0 !important;padding:14px 0 0 0;font-size:11px;
        letter-spacing:.5px;text-transform:uppercase;font-weight:700;color:var(--ink);}
   .paso-e span{flex:0 0 22px;height:22px;border-radius:50%;border:1px solid var(--ink);
