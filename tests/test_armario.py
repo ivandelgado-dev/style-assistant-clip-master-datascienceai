@@ -137,6 +137,22 @@ check("quitar una importada NO borra la foto original", original.exists())
 check("vaciado no reimporta", armario.importar(BD, A, Vi, filas_i, pos) == 0
       and armario.contar(BD, A) == 0)
 
+print("\n=== 7. Fotos que no son una prenda nueva ===")
+check("sin IA no se bloquea nada", armario.problema_foto(None) is None)
+check("persona vestida", armario.problema_foto(
+    {"hay_persona": True, "piezas": [{"tipo": "camiseta"}, {"tipo": "vaquero"}]}) == "persona")
+check("sin ropa", armario.problema_foto({"hay_persona": False, "piezas": []}) == "sin_ropa")
+check("prenda suelta vale", armario.problema_foto(
+    {"hay_persona": False, "piezas": [{"tipo": "camiseta"}]}) is None)
+rng = np.random.default_rng(1)
+Vd = rng.normal(size=(5, 512)).astype(np.float32)
+check("la misma foto es duplicada", armario.duplicada(Vd, Vd[3] * 2.0) == 3)
+casi = Vd[1] + 0.05 * np.linalg.norm(Vd[1]) / np.sqrt(512) * rng.normal(size=512)
+check("casi la misma (retoma) es duplicada", armario.duplicada(Vd, casi) == 1)
+check("una distinta no es duplicada", armario.duplicada(Vd, rng.normal(size=512)) is None)
+check("armario vacío: nada es duplicado",
+      armario.duplicada(np.zeros((0, 512), np.float32), Vd[0]) is None)
+
 print()
 if fallos:
     print(f"FALLAN {len(fallos)}: {fallos}")

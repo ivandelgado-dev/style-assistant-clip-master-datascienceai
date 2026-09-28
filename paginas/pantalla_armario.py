@@ -33,6 +33,7 @@ from __future__ import annotations
 import hashlib
 import html as _html
 
+import numpy as np
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 
@@ -111,6 +112,10 @@ def _previa(datos: bytes) -> tuple[bytes | None, str | None]:
 def _sugerencia(jpeg: bytes) -> dict | None:
     """Lo que Gemini ve en la foto de la prenda, o None (sin clave, sin red).
 
+    Devuelve {"pieza": ..., "problema": ...}. `problema` es "persona" (alguien
+    vestido, no una prenda suelta) o "sin_ropa"; en ese caso no hay pieza que
+    proponer. Ver armario.problema_foto.
+
     Se le pasa la foto YA preparada: son exactamente los bytes que se
     guardan, así que la etiqueta queda en caché para esa prenda.
     """
@@ -121,8 +126,9 @@ def _sugerencia(jpeg: bytes) -> dict | None:
         r = etiquetas.analizar(jpeg)
     except gemini.ErrorGemini:
         return None
-    if not r.get("piezas"):
-        return None
+    problema = armario.problema_foto(r)
+    if problema:
+        return {"pieza": None, "problema": problema}
     pieza = r["piezas"][0]
     # Rasgos de estilo (de béisbol, cargo, de vestir…): petición aparte, para
     # no tocar la versión congelada de las etiquetas. Si falla, sin rasgos.
@@ -130,11 +136,19 @@ def _sugerencia(jpeg: bytes) -> dict | None:
         ras = etiquetas.analizar_rasgos(jpeg)
     except gemini.ErrorGemini:
         ras = None
-    return {**pieza, "rasgos": ras} if ras else pieza
+    return {"pieza": {**pieza, "rasgos": ras} if ras else pieza, "problema": None}
 
 
 def _vectorizar(jpeg: bytes):
     return busqueda.vector(jpeg, None)
+
+
+def _ya_la_tienes(uid: int, jpeg: bytes) -> str | None:
+    """Nombre de la prenda del armario que es casi la misma foto, o None.
+    Solo CLIP, así que funciona también sin IA."""
+    V, filas = armario.listar(BD_USUARIOS, uid)
+    i = armario.duplicada(V, _vectorizar(jpeg))
+    return None if i is None else nombre(filas[i]["categoria"]).lower()
 
 
 @st.dialog("Añadir una prenda", width="large", on_dismiss="rerun")
@@ -179,12 +193,35 @@ def _dialogo_anadir(uid: int):
         # La IA propone; el usuario confirma. Las claves de los campos llevan
         # la huella de la foto para que la propuesta se aplique a cada foto
         # nueva (un campo de Streamlit solo toma su valor inicial una vez).
-        sug = None
+        sug, problema, repe = None, None, None
         if jpeg:
             with st.spinner("Mirando la prenda…"):
-                sug = _sugerencia(jpeg)
+                rev = _sugerencia(jpeg) or {}
+                sug, problema = rev.get("pieza"), rev.get("problema")
+                repe = _ya_la_tienes(uid, jpeg)
         h = hashlib.sha1(jpeg).hexdigest()[:8] if jpeg else "0"
         s_ = f"{k}_{h}"
+
+        # Lo que no parece una prenda nueva no se guarda sin confirmarlo. No
+        # se bloquea del todo: la IA puede equivocarse, y lo que dice el
+        # usuario manda (aunque aquí acertó persona / prenda suelta en 24/24
+        # y 118/118).
+        avisos = []
+        if problema:
+            avisos.append(armario.PROBLEMAS_FOTO[problema])
+        if repe:
+            avisos.append(f"Se parece muchísimo a una prenda que ya tienes "
+                          f"({_html.escape(repe)}): puede ser la misma foto o la "
+                          f"misma prenda otra vez.")
+        forzar = True
+        if avisos:
+            st.markdown('<div class="aviso" style="margin:4px 0 10px 0;"><p class="cuerpo" '
+                        'style="margin:0;">' + "<br>".join(avisos) +
+                        '</p></div>', unsafe_allow_html=True)
+            forzar = st.checkbox(
+                "Es otra prenda y está bien: guárdala igualmente" if repe and not problema
+                else "La IA se equivoca: es una prenda sola, guárdala igualmente",
+                key=f"arm_forzar_{k}_{h}")
 
         opciones = _predefinidas() + sorted(propias) + [OTRA]
         cat_sug = sug["tipo"] if sug and sug["tipo"] in opciones else None
@@ -237,7 +274,7 @@ def _dialogo_anadir(uid: int):
                         'búsqueda es la foto y, si hay IA, su descripción.</p>',
                         unsafe_allow_html=True)
 
-        listo = bool(jpeg) and cat is not None and (
+        listo = bool(jpeg) and forzar and cat is not None and (
             cat != OTRA or (armario.clave_categoria(nuevo) and pos_nueva))
         st.markdown('<div style="height:8px;"></div>', unsafe_allow_html=True)
         b1, b2 = st.columns([1.5, 1])
@@ -317,7 +354,11 @@ def _subida_varias(uid: int):
         '<p class="cuerpo" style="margin:0;font-size:13.5px;line-height:21px;"><b>La IA no es perfecta:</b> en el '
         'armario del autor acertó el tipo de prenda en 105 de 118. Revisa cada '
         'prenda después de subirla y corrige lo que no cuadre; lo que tú '
-        'escribes manda sobre lo que dice la IA.</p></div><div style="height:14px;"></div>',
+        'escribes manda sobre lo que dice la IA.</p>'
+        '<p class="cuerpo" style="margin:8px 0 0 0;font-size:13.5px;line-height:21px;">'
+        'No se suben las fotos con una persona vestida, las que no tienen ropa '
+        'ni las prendas que ya están en tu armario. Al terminar te dice cuáles.'
+        '</p></div><div style="height:14px;"></div>',
         unsafe_allow_html=True)
     kv = st.session_state.setdefault("arm_kv", 0)
     fotos = st.file_uploader("Fotos de las prendas", type=["jpg", "jpeg", "png", "webp"],
@@ -358,29 +399,49 @@ def _subida_varias(uid: int):
                     f'{_html.escape(gemini.resumen_error(e))}. No se ha subido nada.</p>',
                     unsafe_allow_html=True)
         return
-    hechas, sin_tipo = [], []
+    hechas, sin_tipo, personas, repes = [], [], [], []
+    # Para no meter dos veces la misma prenda: contra el armario y contra las
+    # que ya han entrado en esta misma tanda.
+    V = armario.listar(BD_USUARIOS, uid)[0]
     for i, (f, jpeg) in enumerate(prep, 1):
         barra.progress(0.4 + 0.6 * i / len(prep), text=f"Guardando {i} de {len(prep)}…")
         e = etiquetas.en_cache(jpeg, modelo)
+        problema = armario.problema_foto(e)
+        if problema == "persona":
+            personas.append(f.name)
+            continue
         pieza = (e or {}).get("piezas", [None])[0] if (e or {}).get("piezas") else None
         cat = (pieza or {}).get("tipo")
-        if cat not in POSICION:
+        if problema or cat not in POSICION:
             sin_tipo.append(f.name)
+            continue
+        v = np.asarray(_vectorizar(jpeg), dtype=np.float32).reshape(1, -1)
+        if armario.duplicada(V, v) is not None:
+            repes.append(f.name)
             continue
         ras = etiquetas.rasgos_en_cache(jpeg)
         try:
             armario.anadir(BD_USUARIOS, DATOS, uid, cat, POSICION[cat], f.getvalue(),
                            _vectorizar, {}, etiquetas={**pieza, "rasgos": ras} if ras else pieza)
             hechas.append(cat)
+            V = np.vstack([V, v]) if V.size else v
         except ValueError:
             malas.append(f.name)
+    lista = lambda xs: f"{', '.join(xs[:4])}{'…' if len(xs) > 4 else ''}"
     partes = [f"{len(hechas)} prenda{'s' if len(hechas) != 1 else ''} añadida"
-              f"{'s' if len(hechas) != 1 else ''}. Revísalas en Detalles: la IA puede "
+              f"{'s' if len(hechas) != 1 else ''}. Revísala{'s' if len(hechas) != 1 else ''} en Detalles: la IA puede "
               "equivocarse, y la talla la pones tú."]
+    if personas:
+        partes.append(f"{len(personas)} foto{'s' if len(personas) != 1 else ''} "
+                      f"con una persona vestida ({lista(personas)}): para el armario "
+                      f"hace falta la prenda sola, extendida. No se ha{'n' if len(personas) != 1 else ''} subido.")
     if sin_tipo:
         partes.append(f"La IA no ha reconocido qué prenda es en {len(sin_tipo)} "
-                      f"({', '.join(sin_tipo[:4])}{'…' if len(sin_tipo) > 4 else ''}): "
-                      "súbelas una a una.")
+                      f"({lista(sin_tipo)}): súbelas una a una.")
+    if repes:
+        partes.append(f"{len(repes)} ya estaba{'n' if len(repes) != 1 else ''} en tu "
+                      f"armario o repetida{'s' if len(repes) != 1 else ''} en la tanda "
+                      f"({lista(repes)}): no se ha{'n' if len(repes) != 1 else ''} vuelto a subir.")
     if malas:
         partes.append(f"{len(malas)} foto{'s' if len(malas) != 1 else ''} no se "
                       f"ha{'n' if len(malas) != 1 else ''} podido leer.")

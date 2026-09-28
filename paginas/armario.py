@@ -205,6 +205,57 @@ def _vector_valido(v) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# Comprobaciones antes de guardar
+# ---------------------------------------------------------------------------
+
+# Coseno (CLIP plano) a partir del cual una foto nueva se da por la misma
+# prenda que una que ya está. Medido en las dos cuentas (28/09):
+#   - dos prendas DISTINTAS: máximo 0,977 en el armario del autor (118 fotos
+#     de móvil) y 0,986 en las 54 fotos de producto de tienda, que al ser de
+#     estudio con fondo blanco se parecen más entre sí;
+#   - dos fotos de la MISMA prenda, recolocada: 0,991 de mediana
+#     (docs/resultados_domain_gap.md §3); la misma foto, ~1.
+# 0,99 queda por encima de todas las parejas distintas medidas: pilla la misma
+# foto y parte de las retomas, y no molesta con prendas parecidas. Si aun así
+# salta, el usuario puede guardarla igualmente.
+UMBRAL_DUPLICADA = 0.99
+
+PROBLEMAS_FOTO = {
+    "persona": "La IA ve a una persona vestida. Para el armario hace falta la "
+               "prenda sola, extendida sobre una superficie lisa.",
+    "sin_ropa": "La IA no ve ninguna prenda en esta foto.",
+}
+
+
+def problema_foto(etq: dict | None) -> str | None:
+    """Lo que la IA ve mal para una foto de armario, o None si vale.
+
+    Con persona: una foto de alguien vestido no es una prenda del armario (y
+    la IA, además, lista varias piezas). Sin piezas: no hay ropa. Sin
+    etiquetas (no hay IA) no se puede saber y no se bloquea nada.
+    """
+    if not etq:
+        return None
+    if etq.get("hay_persona"):
+        return "persona"
+    if not etq.get("piezas"):
+        return "sin_ropa"
+    return None
+
+
+def duplicada(V: np.ndarray, v, umbral: float = UMBRAL_DUPLICADA) -> int | None:
+    """Índice de la prenda de V más parecida a v si pasa del umbral; si no, None."""
+    V = np.asarray(V, dtype=np.float32)
+    if V.size == 0:
+        return None
+    v = np.asarray(v, dtype=np.float32).reshape(-1)
+    Vn = V / np.maximum(np.linalg.norm(V, axis=1, keepdims=True), 1e-12)
+    s = Vn @ (v / max(float(np.linalg.norm(v)), 1e-12))
+    i = int(np.argmax(s))
+    return i if float(s[i]) >= umbral else None
+
+
+# ---------------------------------------------------------------------------
 # Escritura
 # ---------------------------------------------------------------------------
 
