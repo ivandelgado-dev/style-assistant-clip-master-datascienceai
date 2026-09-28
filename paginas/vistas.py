@@ -1102,7 +1102,15 @@ def buscar():
                                   key="b_foto", label_visibility="collapsed")
         datos = subida.getvalue() if subida is not None else None
         if datos:
-            ref = Image.open(io.BytesIO(datos)).convert("RGB")
+            # Un fichero con extensión de imagen que no lo es (o está roto) no
+            # debe tumbar la página: se dice y no se busca.
+            try:
+                ref = Image.open(io.BytesIO(datos)).convert("RGB")
+            except Exception:
+                st.markdown('<p class="nota-form"><b style="color:var(--burdeos);">'
+                            'No se puede leer esa imagen.</b> Prueba con un JPG o '
+                            'PNG.</p>', unsafe_allow_html=True)
+                datos = None
 
     if not datos:
         with res:
@@ -1185,6 +1193,17 @@ def buscar():
                 st.session_state[k_manual] = True
                 st.rerun()
         else:
+            # La IA ha mirado la foto y no ve ropa (un paisaje, un perro…).
+            # La búsqueda siempre devuelve lo más cercano, así que se avisa:
+            # sin ropa en la foto, ese «más cercano» no significa nada.
+            if etq_ref is not None and not etq_ref.get("piezas"):
+                # padding-bottom: el contenedor de Markdown lleva -16 px abajo
+                # y el texto se montaba sobre los botones de debajo.
+                st.markdown('<div style="padding-bottom:22px;"><p class="nota-form">'
+                            '<b style="color:var(--burdeos);">La IA no ve ropa en '
+                            'esta foto.</b> Akin te enseña igualmente lo más '
+                            'cercano de tu armario, pero sin ropa en la foto no '
+                            'se parece a nada.</p></div>', unsafe_allow_html=True)
             tipo = st.segmented_control(
                 "Qué hay en la foto", ["persona", "prenda"], default=tipo_def,
                 format_func={"persona": "Una persona",
