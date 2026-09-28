@@ -1,55 +1,57 @@
-# Entrega 5 — Diseño del frontal y experiencia de usuario
+# Entrega 5. Diseño del frontal y experiencia de usuario
 
-> **ESQUELETO. El texto lo escribes tú.**
-> Cada apartado lleva (a) lo que pide el enunciado, (b) el material del
-> repositorio que le corresponde, con el número y el fichero de donde sale.
-> Los bloques `ESCRIBE:` son tuyos. Borra estas indicaciones al terminar.
->
-> Aviso: donde hay cifras, están medidas y tienen fichero. No las redondees
-> hacia arriba ni las adornes. Si una no te cuadra, pregúntame antes de
-> cambiarla.
+**Autor:** Iván Delgado
+**Máster en Data Science y Desarrollo de IA, Evolve Academy**
+**Fecha:** septiembre de 2026
+
+> **Nota de trazabilidad.** Esta entrega llega tarde y con ventaja: cuando la escribo, el frontal ya está construido (Streamlit, en `app.py` y `paginas/`). Los mockups de abajo están dibujados sobre la estructura real de la app. Las prendas son dibujos y no fotos porque ni las fotos de mi armario ni las de tienda van al repositorio. Donde el diseño cambió respecto a lo que tenía pensado en entregas anteriores, lo digo.
 
 ---
 
 ## 1. Resumen de la solución y del usuario
 
-*Pide: qué problema resuelve, quién es el usuario, qué necesidad concreta tiene,
-qué tipo de producto es, y qué resultado obtiene del frontal. Sin repetir las
-entregas anteriores.*
+**El problema.** Ves un look que te gusta, en una tienda, en Instagram o en la calle, y no sabes si tienes algo parecido en casa. Casi nunca es que te falte ropa: es que no te acuerdas de la que tienes, o no la asocias con lo que estás viendo porque "no es igual". Y las apps de moda que existen están hechas para venderte la prenda, no para que uses la tuya.
 
-`ESCRIBE:` el problema en tus palabras, dos o tres frases.
+**El usuario.** Un chico con un armario normal (del orden de cien prendas) que quiere vestir mejor con lo que ya tiene. No sabe nada de modelos ni de vectores y no tiene por qué.
 
-**Material:**
-- Tipo de producto según la lista del enunciado: **recomendador / explorador por
-  recuperación**. No es un dashboard ni un predictor.
-- Usuario: persona con un armario digitalizado que ve una prenda que le gusta y
-  quiere saber qué tiene ya parecido. Alcance de producto: ropa de hombre.
-- Resultado que obtiene: sus propias prendas ordenadas por proximidad a una
-  imagen de referencia, en dos bandas con significado medido.
-- Entrada: una imagen de referencia y, opcionalmente, la dimensión sobre la que
-  comparar (parecido general, corte, textura, tejido).
+**La tarea concreta.** Dos preguntas que se hace delante del armario:
 
-`ESCRIBE:` la necesidad concreta. Sugerencia de ángulo, porque es el que el
-tribunal entiende sin explicación: el problema no es tener poca ropa, es no
-acordarse de la que ya se tiene.
+1. *"Tengo esta foto. ¿Qué me pongo de lo mío para ir parecido?"*
+2. *"Me quiero poner esta prenda. ¿Vale para este estilo? ¿Con qué la combino?"*
+
+**Tipo de producto.** Un **recomendador por recuperación**. No predice ni clasifica: ordena las prendas del propio usuario por parecido a una referencia (función 1) y monta conjuntos con reglas explícitas (función 2). No es un dashboard.
+
+**Resultado principal.** Su propia prenda más parecida para cada parte del look (arriba, encima, abajo), con alternativas ordenadas. En la segunda función, varios looks con su prenda y un veredicto de si encaja en el estilo y por qué.
 
 ---
 
-## 2. Imagen mockup del frontal
+## 2. Mockup del frontal
+
+Pantalla principal: **Buscar → Desde una foto**.
 
 ![Mockup del frontal](../assets/05_mockup_frontal.png)
 
-`ESCRIBE:` un párrafo que recorra la pantalla señalando qué es cada zona.
+Se lee de izquierda a derecha, que es el orden en que se usa:
 
-**Material:**
-- Exportada a 2880×1800 desde el canvas de diseño. Cuatro pantallas diseñadas:
-  principal, detalle, alta de prenda y sin resultados.
-- Sistema visual: estética de e-commerce de moda (rejilla, filetes de 1 px,
-  tipografía con serif, imagen a sangre, sin tarjetas ni sombras). Paleta
-  heredada del chatbot del módulo de IA Generativa —beige `#F7F3EC`, burdeos
-  `#7B2D40` solo para lo interactivo, negro `#1C1B1A`— para que los dos
-  proyectos del máster lean como un mismo producto.
-- El beige es neutro a propósito: el color lo pone la ropa.
+- **A la izquierda, lo que pones tú** (1-3). La foto de referencia, lo que la IA ha visto en ella (como propuesta, con un «¿No es así? Cámbialo») y dos controles: qué partes buscar y qué pesa más en el orden.
+- **A la derecha, lo que te devuelve** (4-6). Una columna por capa del look. Arriba de cada columna, tu prenda más parecida, en grande; debajo, las dos siguientes y un «Ver más». Si el resultado no cumple algo que se ve en la foto, lo dice debajo (5).
+- **Abajo, lo que puedes hacer después** (7). Pedir un cambio con tus palabras («de manga larga», «más oscuro») y volver a buscar.
+
+Pantalla secundaria: **Buscar → Por estilo**, la segunda función.
+
+![Mockup de Por estilo](../assets/05_mockup_por_estilo.png)
+
+Tres pasos numerados a la izquierda (por dónde empiezas, tu prenda, el estilo) y el veredicto justo debajo. A la derecha, los looks, cada uno con su «Por qué», y la valoración «Me lo pondría / No me convence».
+
+**Sistema visual.** Lo saqué midiendo, no de memoria: inspeccioné las webs de Zara, Pull&Bear y Bershka con las herramientas del navegador (estilos calculados, tamaños, variables CSS) y me quedé con lo que tienen en común (`docs/sistema_visual.md`):
+
+- una sola familia sans-serif, filetes de 1 px y nada de sombras;
+- la foto de la prenda manda y la interfaz se aparta;
+- el estado activo se marca con peso tipográfico, no con color.
+
+La paleta es la del chatbot que hice en el módulo de IA Generativa, para que los dos proyectos del máster se lean como el mismo producto: beige `#F7F3EC` de fondo, negro `#1C1B1A` para el texto y burdeos `#7B2D40`. El beige es neutro a propósito, porque el color lo pone la ropa.
+
+La primera versión del mockup, de antes de construir la app, sigue en `docs/assets/05_mockup_frontal_v1.png`. Buscaba una sola prenda contra el armario y la ordenaba en dos bandas de confianza. Al construir la app lo cambié a una columna por capa del look (ver el apartado 5).
 
 ---
 
@@ -57,158 +59,129 @@ acordarse de la que ya se tiene.
 
 ### 3.1. Utilidad y valor de la solución
 
-*Pide: qué tarea resuelve, qué decisión mejora, qué información es esencial y
-cuál se ha decidido NO mostrar, y cómo el resultado analítico se convierte en
-algo útil.*
+**Qué decisión mejora.** La de qué ponerte con lo que tienes. Sin la app, la haces tú de memoria, prenda por prenda, y lo normal es que se te escape la mitad del armario. Con la app subes una foto y en unos segundos tienes tus tres mejores candidatas para cada parte del look.
 
-`ESCRIBE:` la tarea y la decisión que mejora.
+**Qué ahorra.** Tiempo delante del armario y, sobre todo, compras repetidas: comprar algo que ya tienes en otro color porque no te acordabas de ello. Que la app empiece por lo que ya has pagado es la idea del producto (*"No te vende nada. Te enseña lo que ya tienes"*).
 
-**Material — lo que se decidió no mostrar, y por qué (esto es lo que puntúa):**
-- **No hay porcentaje de coincidencia.** El modelo produce distancias coseno en
-  un subespacio, no probabilidades. Un "92%" sería inventado.
-- **No hay puntuación numérica por prenda.** Una barra de intensidad ordena sin
-  fingir precisión que no existe.
-- **No se muestra la distancia cruda** en la pantalla principal: no significa
-  nada para el usuario. Está en la vista de detalle, para quien quiera auditar.
-- **No hay juicio sobre si la prenda le favorece.** Descartado desde la entrega
-  1: no hay datos públicos y un modelo entrenado sobre juicios estéticos de
-  cuerpos aprende sesgos corporales por construcción.
+**Qué información es esencial.** La foto de tu prenda, grande, y su tipo. Es lo que necesitas para decidir si te sirve. Todo lo demás está en segundo plano.
+
+**Qué decidí no enseñar, y por qué:**
+
+- **Ningún porcentaje de coincidencia.** El modelo da distancias coseno, no probabilidades, y un "92 % de coincidencia" sería inventado. Lo medí: en la banda más alta de parecido, solo 26 de cada 100 resultados comparten el atributo consultado (`docs/resultados_calibracion.md`). Un 92 % en pantalla sería mentira.
+- **Ninguna cifra de similitud.** En mi armario dos prendas distintas ya salen a 0,93 de coseno y dos fotos de la misma prenda a 0,99. Todo cae en un margen de 0,05-0,07. Enseñar tres decimales aparenta una precisión que no hay. El orden sí dice algo, y por eso se enseña el orden.
+- **Nada sobre si te favorece.** No hay datos públicos para eso, y un modelo entrenado con juicios estéticos sobre cuerpos aprende sesgos sí o sí. Lo descarté desde la primera entrega. La altura, si la das, activa una sola regla de proporción que se ve y se puede quitar. El peso no se pide.
+- **Nada de precios, favoritos ni cesta.** No hay nada que vender.
+
+**Cómo se convierte el resultado en algo útil.** El modelo devuelve una lista ordenada de vectores. La pantalla lo convierte en "esta es tu camiseta más parecida, estas dos también, y ojo, que no es del mismo color". Así pasa de ranking a decisión.
 
 ### 3.2. Flujo de usuario
 
-*Pide: punto de entrada, entradas, procesamiento, resultado, acción y
-excepciones.*
+Recorrido principal (función 1, Desde una foto):
 
-`ESCRIBE:` el recorrido numerado.
+1. **Entrada.** El usuario entra con su correo. Si su armario está vacío, la app le manda primero a *Mi armario*: sin prendas no hay nada que buscar.
+2. **Digitalizar el armario (una vez).** En *Mi armario* sube fotos de sus prendas, de una en una o varias de golpe (hasta 40). Gemini propone tipo, color, tejido, manga y estampado, y el usuario corrige lo que esté mal. Lo que pone el usuario manda sobre la IA.
+3. **Subir la referencia.** En *Buscar* arrastra la foto de un look.
+4. **Confirmar lo que ve la IA.** La app dice si ve una persona vestida o una prenda suelta, y qué piezas lleva. Si se equivoca, se cambia con un clic.
+5. **Elegir qué buscar y qué pesa más.** Por defecto, todo lo que hay en la foto y el orden por parecido.
+6. **Procesamiento** (no se ve). La foto se corta por zonas y por capas. Cada zona pasa por CLIP ViT-B/32 congelado y por la proyección de 128 dimensiones que entrené con DeepFashion, y se compara por coseno solo con las prendas del usuario de esa posición. Antes del parecido van el tipo, la manga y el largo. Ningún LLM decide el orden.
+7. **Resultado.** Una columna por capa, con la mejor candidata, dos alternativas y «Ver más».
+8. **Acción.** Quedarse con lo que sale, mirar más opciones, cambiar a orden por color o por tela, o pedir un cambio con palabras en «¿Algo distinto?».
 
-**Material:**
-1. Entrada: pantalla de búsqueda con el armario ya cargado (128 prendas en el
-   mockup; 118 reales digitalizadas).
-2. Entradas del usuario: imagen de referencia, dimensión de comparación,
-   filtro de categoría.
-3. Procesamiento: CLIP ViT-B/32 congelado → proyección supervisada de 128
-   dimensiones → similitud coseno contra el armario. Ningún LLM interviene en
-   el orden.
-4. Resultado: dos bandas. Acción: elegir prenda, abrir detalle, o dar feedback.
-5. **Excepción diseñada:** pantalla "sin resultados". Si ninguna prenda supera
-   el umbral de la banda inferior, no se enseñan las diez primeras de una lista
-   que no se parece a nada. Se dice que no hay, y se ofrecen tres salidas.
-   `ESCRIBE:` por qué esto es una decisión de producto y no una limitación.
+Función 2 (Por estilo): eliges una prenda tuya (o «No sé qué ponerme»), eliges estilo, y recibes un veredicto y 8 looks. «Otras propuestas» saca otra tanda, y cada look se puede valorar.
+
+**Excepciones:**
+
+| situación | qué hace la app |
+|---|---|
+| El armario está vacío | Te lleva a *Mi armario* antes de buscar. |
+| No tienes prendas de una posición | La columna lo dice: «No tienes prendas de esta posición. Añádelas en Mi armario». No se rellena con prendas de otra parte del cuerpo. |
+| La IA ve mal la foto | Todo lo que dice la IA sale como propuesta y se puede cambiar. |
+| Gemini no responde (sin clave, sin red, cuota agotada) | La app sigue funcionando: en vez de decírtelo la IA, te pregunta qué hay en la foto. La subida de varias fotos de golpe avisa de que ahora no está disponible y deja subirlas una a una. |
+| El resultado no cumple algo visible | Aviso debajo de la prenda (por ejemplo, el color), con la forma de arreglarlo. |
+| La prenda no encaja en el estilo | Veredicto «No encaja», con la causa y los estilos donde sí encaja. El look solo se monta si lo pides, y cada tarjeta lleva «No cumple X». |
+| Texto que no es una petición de ropa | «No lo he entendido como una petición de ropa.» |
+
+La columna vacía es una decisión, no un fallo. Rellenarla con las diez prendas "menos lejanas" daría una lista que no se parece a nada, y el usuario pensaría que el sistema es malo cuando lo que falta es ropa. Es mejor decir que no hay y decir qué hacer.
 
 ### 3.3. Experiencia de usuario
 
-*Pide: jerarquía visual, simplicidad, legibilidad y consistencia, contexto y
-confianza, control del usuario, feedback del sistema, accesibilidad.*
+- **Jerarquía visual.** Lo primero que se ve es tu prenda, grande. Luego las alternativas, más pequeñas. Los controles quedan a la izquierda y en gris.
+- **Simplicidad.** Por defecto no hay que tocar nada: subes la foto y ya sale un resultado. Lo opcional va plegado («Afinar», «Pídelo con tus palabras»). En *Por estilo* los pasos van numerados porque en una versión anterior se hacía lioso.
+- **Consistencia.** Elegir no es lo mismo que actuar. Las opciones marcadas van en burdeos claro y los botones que hacen algo, en negro. Antes el mismo negro servía para las dos cosas y confundía. Tampoco hay verde ni rojo de "bien/mal", porque el modelo no sabe eso.
+- **Contexto y confianza.** No hay porcentajes, pero sí contexto. Cada look dice «Por qué», con las mismas reglas que lo montaron. El veredicto nombra la causa («Camisa de béisbol: formalidad 2/5»). Y el aviso de color dice cuándo la mejor candidata no es del color de la foto.
+- **Control del usuario.** Todo lo que viene de la IA se puede cambiar: el tipo de prenda al subirla, lo que ve en la foto de referencia y la traducción de una petición en texto. Las notas del usuario mandan sobre lo que ve la IA. La regla de altura se puede apagar.
+- **Feedback del sistema.** Hay indicadores de carga mientras se analiza la foto. La subida de varias fotos termina con un resumen de cuántas se añadieron y cuáles no se reconocieron. Borrar la cuenta pide la contraseña y una casilla de «Entiendo que no se puede deshacer».
+- **Honestidad con la IA.** La subida de varias fotos lo avisa antes de empezar: la IA no es perfecta (acertó el tipo de prenda en 105 de mis 118) y conviene revisar cada prenda. La página de Buscar dice que la foto se envía a Google.
+- **Accesibilidad.** Medí el contraste contra WCAG 2.1 AA, que pide 4,5:1 para texto normal. Todos los colores de texto cumplen sobre el beige:
 
-`ESCRIBE:` las decisiones, apoyándote en el material.
+  | elemento | color | ratio |
+  |---|---|---|
+  | texto principal | `#1C1B1A` | 15,55 |
+  | texto secundario | `#5A5651` | 6,58 |
+  | rótulos pequeños | `#756E66` | 4,54 |
+  | navegación inactiva | `#786E61` | 4,52 |
+  | burdeos | `#7B2D40` | 8,29 |
 
-**Material:**
-- **Jerarquía:** manda la imagen de la prenda. El interfaz desaparece.
-- **Contexto y confianza:** la franja inferior explica cómo se ordenó, qué no
-  es el número, y la limitación conocida. Visible siempre, no escondida.
-- **Control:** botón "No se parece" en el detalle. El feedback se guarda desde
-  el primer día aunque el MVP no lo modele (entrega 3 §feedback).
-- **Consistencia de color:** el burdeos solo aparece donde se puede pulsar. Sin
-  verde/rojo de estado: implicarían "bien/mal" y el modelo no sabe eso.
-- **Accesibilidad:** contraste comprobado contra WCAG 2.1 AA (4,5:1 para texto
-  normal; todo el texto de la pantalla está por debajo del umbral de "texto
-  grande", así que aplica el 4,5 a todo). Ratios sobre el beige `#F7F3EC`:
+  Dos de estos colores los tuve que oscurecer al medirlos: los rótulos estaban en 2,97 y la navegación en 1,96. A ojo parecían legibles. Por eso lo medí en vez de suponerlo.
 
-  | elemento | color | ratio | AA |
-  |---|---|---|---|
-  | texto principal | `#1C1B1A` | 15,55 | sí |
-  | texto secundario | `#5A5651` | 6,58 | sí |
-  | rótulos pequeños (`.meta`) | `#756E66` | 4,54 | sí |
-  | navegación inactiva | `#786E61` | 4,52 | sí |
-  | burdeos interactivo | `#7B2D40` | 8,29 | sí |
-  | subrayado de campo de formulario | `#756E66` | 4,54 | sí (mín. 3:1) |
-
-  **Dos de esos valores se corrigieron al medirlos.** Los rótulos pequeños
-  estaban en `#948D84` (2,97, falla) y la navegación inactiva en `#B6AFA5`
-  (1,96, falla). Se oscurecieron manteniendo tono y saturación, para que la
-  paleta no desafine: siguen siendo el mismo gris cálido, solo más oscuro.
-
-  `ESCRIBE:` si quieres, una frase sobre por qué se midió en vez de suponerlo.
-
-  Queda fuera de lo medido: tamaño de tipografía (los rótulos de 9,5 px son
-  pequeños aunque el contraste cumpla), navegación por teclado y lectores de
-  pantalla. No se han evaluado y no se afirma nada sobre ellos.
+  No he evaluado la navegación por teclado ni los lectores de pantalla, y algunos rótulos son pequeños aunque el contraste cumpla. Está pensada para ordenador; en móvil se ve, pero no la he adaptado.
 
 ---
 
 ## 4. Presentación de resultados y explicabilidad
 
-*Pide: cuál es el resultado principal, qué información adicional permite
-interpretarlo, cómo se evita presentar una estimación como una certeza, y qué
-información técnica se reserva al detalle.*
+**Resultado principal.** Una lista ordenada de prendas del usuario para cada posición del look, de la que se enseña la primera en grande y las dos siguientes.
 
-`ESCRIBE:` el hilo del apartado.
+**Qué ayuda a interpretarlo:**
 
-**Material — esta es la sección fuerte de la entrega, con datos medidos:**
+- **La posición y el tipo.** Cada columna dice qué parte del look es y qué tipo de prenda has encontrado.
+- **Avisos concretos.** Cuando la mejor candidata no es del color que se ve en la foto, lo dice, y dice cómo pedir que el color pese más.
+- **En Por estilo, el porqué.** Cada look lista las razones (base neutra y un color, poco contraste arriba-abajo, paleta de Wada…), y el veredicto da la causa con la formalidad de la prenda.
+- **En Mi armario, el detalle.** La ficha de cada prenda enseña su formalidad (n/5) y qué la mueve, para que el usuario vea por qué una prenda no sale en un estilo.
 
-Las bandas están calibradas sobre las 12.211 consultas de validación
-(`src/calibrar_bandas.py`, `docs/resultados_calibracion.md`):
+**Cómo evito que una estimación parezca una certeza:**
 
-| banda | comparten el atributo consultado |
-|---|---|
-| mayor proximidad (p99) | 26 de cada 100 |
-| posible (p90) | 15 de cada 100 |
-| cualquier resultado del top-50 | 7 de cada 100 |
+- no hay porcentajes ni cifras de similitud (ver 3.1);
+- siempre hay alternativas, nunca una sola respuesta;
+- lo que dice la IA sale como propuesta ("La IA ve…"), no como un hecho;
+- si un look se salta las reglas del estilo porque el usuario lo ha pedido, la tarjeta lo dice.
 
-- Los umbrales se fijaron **por cuantil antes de mirar la precisión**. Elegirlos
-  viendo el resultado sería elegir el que mejor queda.
-- **La banda aguanta en atributos no vistos al entrenar:** 24 de cada 100 frente
-  a 26 en los vistos. Por eso se puede enseñar en producción, donde los
-  atributos del usuario no son los del entrenamiento.
-- **Por eso el rótulo NO dice "coincidencia clara".** 26 de cada 100 es 1 de
-  cada 4. La pantalla muestra el 26 junto al 7 de la tasa base, para que se lea
-  el factor 3,5 y no solo el 26%.
-- Limitación de la métrica: "compartir el atributo etiquetado" es criterio duro;
-  el etiquetado de DeepFashion es incompleto, así que 26 es cota inferior. No se
-  corrige al alza.
+**Qué se queda fuera de la pantalla principal.** Todo lo técnico: los números del modelo, las métricas y cómo se calibró. Está en las páginas *El sistema* y *Resultados* de la propia app, con los resultados buenos y los malos, para quien quiera mirarlo.
 
-Reservado a la vista de detalle: posición en el ranking, distancia en el
-subespacio, y la lista explícita de lo que el sistema **no** puede decir.
+### IA generativa
 
-### IA generativa como capa de explicación
+**Sí la uso, y para tres cosas concretas**, todas con Gemini 3.5 Flash-Lite y respuestas en JSON con listas cerradas:
 
-`ESCRIBE:` el enunciado pide indicarlo expresamente. El material:
-- **Sí se usa, y acotada:** un LLM propone categoría, color y corte al subir una
-  prenda, y traduce intención en lenguaje natural a restricciones de filtro.
-- **No decide el outfit ni el orden de los resultados.** Esa decisión es
-  determinista y evaluable sin él, que es lo que permite medirla.
-- Trazabilidad: la propuesta del LLM se marca como propuesta y el usuario
-  confirma. La pantalla de alta lo dice: "se equivoca con frecuencia en tejido".
+1. **Describir fotos.** Al subir una prenda: tipo, color, tejido, manga, largo, estampado y 13 rasgos de sí/no (capucha, cargo, gráfico grande…). En la referencia: si hay una persona y qué piezas lleva, por capas.
+2. **Traducir texto a opciones.** «Una cena informal, algo en azul» se convierte en {estilo, color, capa}, y esas opciones se ven marcadas en la pantalla y se pueden cambiar.
+3. **Ajustar una búsqueda.** «¿Algo distinto?» traduce «de manga larga» a un cambio en los filtros.
+
+**Lo que no hace nunca es decidir.** No elige qué prenda sale, ni en qué orden, ni qué look se monta. Eso lo deciden los vectores y unas reglas escritas en el código, porque tiene que ser reproducible y evaluable. Si le preguntas dos veces a un modelo de lenguaje, te puede contestar distinto: su formalidad global solo coincide consigo misma en 20 de 30 fotos. Los rasgos concretos coinciden en 27-30 de 30, y por eso uso los rasgos y no su juicio.
+
+**Tampoco genera explicaciones.** Los «Por qué» de cada look no los escribe un LLM: salen de las mismas reglas que montan el look. Así no puede inventarse una causa, y lo que se explica es exactamente lo que se ha hecho.
+
+**Trazabilidad.** Lo que dice la IA se guarda en una caché (`data/etiquetas_cache.json`), por foto y versión de instrucciones, así que el mismo armario da el mismo resultado. Y lo he medido contra mis anotaciones a mano: tipo 105/118, manga 25/27, persona en foto de modelo 24/24.
 
 ---
 
 ## 5. Alcance del MVP
 
-*Pide: qué estará realmente implementado, qué es solo representación visual, y
-qué tecnología.*
+**Implementado y funcionando** (Streamlit, Python):
 
-**Material — lo que va a estar:**
-- Streamlit. El frontal no es donde está la contribución y es Python.
-- Búsqueda por referencia contra el armario, con las cuatro dimensiones.
-- Vista de detalle con la explicabilidad.
-- Alta de prenda con propuesta automática de etiquetas.
-- Registro de feedback.
+- cuentas de usuario, cada una con su armario (SQLite), perfil, foto y borrado de cuenta;
+- Mi armario: subir prendas de una en una o varias de golpe, con propuesta de la IA, editar detalles y categorías;
+- Buscar desde una foto: persona o prenda suelta, por capas, con orden por parecido, color o tela, y ajuste con palabras;
+- Buscar por estilo: 10 estilos, veredicto con causa, 8 looks por tanda, paletas de Wada, regla de altura opcional;
+- valoraciones «Me lo pondría / No me convence» guardadas desde el primer día;
+- páginas que explican el sistema, los resultados y los límites.
 
-**Lo que es solo mockup, y hay que decirlo:**
-- El diseño de estas pantallas. Lo implementado será Streamlit, más pobre.
-- **Conjuntos.** La compatibilidad entre prendas no está implementada; en el
-  mockup aparece marcada "próximamente".
-- **Recuperación de catálogo comercial.** Diseñada (entrega 2), no implementada.
+**Diseñado pero no construido:**
 
-`ESCRIBE:` cierra tú. El enunciado pide ambición en la utilidad y realismo en la
-ejecución; el material de arriba te da las dos mitades.
+- **Catálogo comercial y enlace a producto.** Cuando no tienes nada parecido, buscarlo en una tienda. Quedó fuera del núcleo por decisión de alcance (entrega 4).
+- **Compatibilidad aprendida con Polyvore.** Hoy los looks salen de reglas. Hacerlo con un modelo entrenado era demasiado para el tiempo que había.
+- **Correos** de confirmación y recuperación de contraseña. Necesitan un servidor de correo y no aportan nada a lo que se evalúa.
+- **Servicio aparte (FastAPI) y PostgreSQL con pgvector.** Con un armario de cien prendas por usuario, comparar una a una tarda milisegundos, así que SQLite basta. El esquema es el de la entrega 3 y se puede migrar.
 
----
+**Lo que cambió respecto a lo planeado.** En la entrega 2 el frontal iba a ser una búsqueda de una prenda contra el armario. La versión final busca un look entero por capas, porque así es como se usa de verdad: la foto que te gusta casi nunca es de una sola prenda. Y la segunda función, *Por estilo*, pasó de "móntame algo" a "¿vale esta prenda mía para este estilo?", porque es la pregunta que me hacía yo al probarla.
 
-## Huecos que tienes que rellenar tú, en una lista
-
-1. Todo lo marcado `ESCRIBE:`.
-2. Decidir si mencionas las cuatro pantallas o solo la principal.
-3. Quitar este bloque y todas las indicaciones del principio.
-
-(El contraste ya está medido y corregido — apartado 3.3.)
+Creo que el diseño es ambicioso en lo útil (un armario entero, dos funciones y explicaciones en cada resultado) y realista en lo técnico: todo lo que se ve en los mockups está funcionando, y lo que no está funcionando está marcado como trabajo futuro en la propia app.

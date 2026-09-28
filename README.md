@@ -1,6 +1,6 @@
-# Asistente de Estilo Personal con IA
+# Akin · Asistente de Estilo Personal con IA
 
-Proyecto Final del **Máster en Data Science y Desarrollo de IA** — Evolve Academy.
+Trabajo de Fin de Máster del **Máster en Data Science y Desarrollo de IA**, Evolve Academy.
 
 **Autor:** Iván Delgado
 
@@ -8,31 +8,43 @@ Proyecto Final del **Máster en Data Science y Desarrollo de IA** — Evolve Aca
 
 ## Qué es
 
-Un sistema de búsqueda visual de ropa por atributos. Dada una imagen de referencia, recupera las prendas más parecidas de un armario digitalizado, pudiendo consultar por un atributo concreto —corte, color o textura— de forma independiente.
+Subes la foto de un look que te gusta y Akin busca en **tu propio armario** lo más parecido, pieza a pieza. O eliges un estilo y te monta conjuntos con lo que ya tienes, diciéndote si una prenda tuya encaja y por qué.
 
-Sobre ese núcleo se construye, como ampliación, un recomendador de outfits que combina las prendas del armario y sugiere piezas de catálogo para completar un look.
-
-El alcance está acotado a **ropa de hombre**.
+El alcance del producto es ropa de hombre.
 
 ## Enfoque
 
-El sistema es de **recuperación y ranking multimodal**, no de generación. Las prendas se representan en un espacio de embeddings visual-textual sobre un backbone CLIP congelado.
+Es un sistema de **recuperación**, no de generación. Cada prenda se convierte en un vector con **CLIP ViT-B/32 congelado**, y encima va una **proyección lineal de 512 a 128 dimensiones** entrenada con pérdida contrastiva sobre las etiquetas de atributos de DeepFashion.
 
-La contribución técnica central son las **proyecciones específicas por atributo**: cabezas ligeras entrenadas sobre el embedding congelado que permiten consultar por corte, color o textura por separado. Esto es lo que hace posible responder a *"parécete al corte, ignora el color"* cuando el usuario no posee la prenda exacta de la referencia. Un embedding CLIP plano no lo permite: mezcla todos los atributos en un único vector.
+La hipótesis de partida era que **una cabeza por atributo** (corte, textura, tejido) funcionaría mejor que una sola proyección conjunta.
 
-## Alcance
+## Qué salió
 
-El proyecto distingue deliberadamente entre un núcleo evaluable y las ampliaciones opcionales, para proteger un core acotado y demostrable.
+Detalle en `docs/resultados_*.md`. Métricas y configuración de cada corrida en `experiments/`.
 
-**Core — lo que se evalúa con rigor:**
-- Que la búsqueda por atributos mejora de forma medible frente al enfoque básico (CLIP plano).
-- Que el sistema funciona sobre un armario real, no solo sobre fotos de catálogo (evaluación del *domain gap*).
+- **La proyección supervisada mejora a CLIP**, también en atributos que no vio al entrenar: +0,0217 NDCG@10 en atributos vistos y +0,0132 en no vistos, los dos significativos por bootstrap pareado.
+- **Las cabezas por atributo no ganan a la conjunta.** Solo mejoran en el vocabulario con el que se entrenaron (+0,0035) y fuera de él no se distinguen del ruido (−0,0058, no significativo). Es un resultado negativo, medido con cinco controles.
+- **Salto de dominio** (catálogo frente a fotos de móvil de mi armario, 118 prendas): las dos fuentes se separan con AUC 1,000, pero en la tarea no se detecta una caída significativa con esta muestra.
+- **En la app**, desde la foto de un modelo de tienda, la prenda exacta sale primera 22 de 30 veces entre 172 (CLIP solo: 19). Son fotos nuevas, con la regla escrita antes.
 
-**Ampliaciones (nice-to-have) — solo si el core está cerrado:**
-- Recomendador completo de outfits y compatibilidad entre prendas.
-- Catálogo comercial y enlace a producto.
-- LLM para interpretar peticiones y explicar recomendaciones.
-- Aplicación web desplegada.
+## La aplicación
+
+Streamlit, con cuentas de usuario y un armario por cuenta (SQLite).
+
+- **Mi armario:** subir prendas de una en una o varias de golpe. Gemini propone tipo, color y tejido, y lo que pone el usuario manda.
+- **Buscar desde una foto:** la foto se corta por zonas y por capas, y cada zona se busca solo entre tus prendas de esa posición.
+- **Por estilo:** 10 estilos, con reglas de estilista escritas en el código (formalidad, capas, color y paletas del diccionario de Sanzo Wada). Cada look dice por qué.
+
+La IA generativa **describe y traduce, nunca decide**: qué prenda sale y en qué orden lo deciden los vectores y las reglas.
+
+```
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Gemini necesita `GEMINI_API_KEY` en un fichero `.env`, que no se sube al repositorio. Sin clave, la app funciona y pregunta en vez de proponer.
 
 ## Estado
 
@@ -42,43 +54,34 @@ El proyecto distingue deliberadamente entre un núcleo evaluable y las ampliacio
 | 2 | Selección de idea y análisis de datos | Completada |
 | 3 | Modelo de datos y capa gold | Completada |
 | 4 | Diseño del análisis y estrategia de modelado | Completada |
+| 5 | Diseño del frontal y experiencia de usuario | Completada |
 
 ## Estructura
 
 ```
-docs/
-└── entregas/
-    ├── 01_ideas_producto.md
-    ├── 02_datos_necesarios.md
-    ├── 03_modelo_datos.md
-    └── 04_analisis_modelado.md
+app.py, paginas/        la aplicación
+src/                    datos, entrenamiento y evaluación
+experiments/            una carpeta por corrida: config.yaml y métricas
+docs/                   protocolos y resultados
+docs/entregas/          las cinco entregas
+docs/assets/            mockups de la entrega 5
+tests/                  pruebas automáticas
+data/                   fuera de git
 ```
 
-## Fuentes de datos
-
-El núcleo del proyecto trabaja exclusivamente con fuentes académicas. El catálogo comercial queda fuera del core.
+## Datos
 
 | Fuente | Uso | Licencia |
 |---|---|---|
-| [DeepFashion](https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion.html) | Atributos de prenda (señal de entrenamiento) | Solo investigación académica |
-| [Polyvore Outfits](https://huggingface.co/datasets/mvasil/polyvore-outfits) | Compatibilidad entre prendas (ampliación) | CC BY 4.0 |
-| [Fashion Product Images](https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small) | Catálogo de recuperación | No declarada |
-| Armario propio | Evaluación *out-of-distribution* | Recolección primaria |
+| [DeepFashion](https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion.html) | Supervisión de atributos | Solo investigación académica |
+| Armario propio · 118 prendas | Test fuera de distribución, nunca entrenamiento | Fotos del autor |
+| Parejas modelo / producto · 54 | Evaluación de la búsqueda | Fotos de tienda, solo en local |
+| [Diccionario de Wada](https://github.com/mattdesl/dictionary-of-colour-combinations) | Paletas de «Por estilo» | MIT |
+| [Polyvore Outfits](https://huggingface.co/datasets/mvasil/polyvore-outfits) | Compatibilidad | Prevista, no usada |
+| [Fashion Product Images](https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small) | Catálogo | Previsto, no usado. Licencia no declarada |
 
-Detalle completo, riesgos y alternativas en [`02_datos_necesarios.md`](docs/entregas/02_datos_necesarios.md).
+DeepFashion resultó ser mayoritariamente ropa de mujer (81-93 %, anotado a mano), aunque filtré por categorías compatibles con ropa de hombre. El producto es de hombre; el corpus de entrenamiento, no. Está en `docs/resultados_anotacion_dominio.md`.
 
-## Evaluación
+## Reproducibilidad
 
-- **Métricas automáticas:** Recall@k, NDCG@k y mAP de recuperación por atributo, siempre frente al baseline CLIP plano.
-- **Valoración humana:** panel ciego de evaluadores que comparan baseline y modelo sin saber cuál es cuál, para medir coherencia percibida más allá de las métricas.
-- **Baseline:** similitud coseno sobre el embedding CLIP completo.
-
-Detalle en [`04_analisis_modelado.md`](docs/entregas/04_analisis_modelado.md).
-
-## Stack
-
-Python · PyTorch · CLIP (HuggingFace) · scikit-learn · pandas · PostgreSQL + pgvector · FastAPI · Streamlit · Docker.
-
-## Nota sobre licencias
-
-Este es un artefacto **académico**. DeepFashion restringe su uso a investigación, y la licencia de Fashion Product Images no está declarada. Ninguna imagen de catálogo comercial se almacena ni redistribuye en este repositorio.
+Semillas y versiones fijadas. Cada experimento guarda su `config.yaml` y sus métricas en `experiments/`. Las imágenes no se redistribuyen: `data/` está fuera de git desde el primer commit.

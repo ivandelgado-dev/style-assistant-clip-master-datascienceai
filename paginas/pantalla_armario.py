@@ -148,6 +148,17 @@ def _dialogo_anadir(uid: int):
         st.markdown(GUIA, unsafe_allow_html=True)
 
     with form:
+        modo = st.segmented_control(
+            "Cómo subes", ["una", "varias"], default="una", key="arm_modo",
+            format_func={"una": "Una a una", "varias": "Varias de golpe"}.get,
+            label_visibility="collapsed") or "una"
+        st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
+    if modo == "varias":
+        with form:
+            _subida_varias(uid)
+        return
+
+    with form:
         if hechas:
             st.markdown(f'<div class="aviso" style="margin-bottom:14px;">'
                         f'<p class="cuerpo" style="margin:0;">Guardada: '
@@ -274,6 +285,109 @@ def _dialogo_anadir(uid: int):
             st.rerun(scope="fragment")
         except StreamlitAPIException:
             st.rerun()
+
+
+MAX_VARIAS = 40      # por tanda: ~4 peticiones a la IA y un par de minutos
+
+
+def _subida_varias(uid: int):
+    """Varias fotos de golpe. Sin revisión prenda a prenda: la IA decide qué
+    es cada una (y con eso dónde va) y rellena color, tejido, manga,
+    estampado y rasgos. Las fotos se le mandan de diez en diez, que es una
+    petición por cada diez (la cuota gratuita cuenta peticiones).
+
+    Lo que la IA no reconoce como una categoría de la aplicación no se sube
+    y se dice cuál es: mejor una prenda menos que una prenda mal colocada.
+    """
+    from paginas import etiquetas, gemini
+    if not gemini.disponible():
+        st.markdown('<div class="aviso"><p class="cuerpo" style="margin:0;">Subir varias '
+                    'a la vez necesita la IA: es la que dice qué prenda es cada foto. '
+                    'Ahora no está disponible; súbelas una a una.</p></div>',
+                    unsafe_allow_html=True)
+        return
+    st.markdown(
+        '<div class="aviso aviso-varias"><p class="cuerpo" style="margin:0 0 8px 0;font-size:13.5px;line-height:21px;">'
+        '<b>Cómo funciona.</b> No vas a revisar las prendas una a una al subirlas. '
+        'La IA mira cada foto y rellena sola <b>qué prenda es</b> (y con eso dónde '
+        'va), su color, tejido, manga y estampado.</p>'
+        '<p class="cuerpo" style="margin:0 0 8px 0;font-size:13.5px;line-height:21px;">Lo que la IA no puede saber, '
+        'como la <b>talla</b> o si te queda <b>holgada</b>, lo añades tú después, '
+        'en Mi armario → <b>Detalles</b> de cada prenda.</p>'
+        '<p class="cuerpo" style="margin:0;font-size:13.5px;line-height:21px;"><b>La IA no es perfecta:</b> en el '
+        'armario del autor acertó el tipo de prenda en 105 de 118. Revisa cada '
+        'prenda después de subirla y corrige lo que no cuadre; lo que tú '
+        'escribes manda sobre lo que dice la IA.</p></div><div style="height:14px;"></div>',
+        unsafe_allow_html=True)
+    kv = st.session_state.setdefault("arm_kv", 0)
+    fotos = st.file_uploader("Fotos de las prendas", type=["jpg", "jpeg", "png", "webp"],
+                             accept_multiple_files=True, key=f"arm_varias_{kv}",
+                             label_visibility="collapsed") or []
+    n = len(fotos)
+    if n > MAX_VARIAS:
+        st.markdown(f'<p class="rot" style="color:var(--burdeos);">Como mucho '
+                    f'{MAX_VARIAS} fotos por tanda; has elegido {n}.</p>',
+                    unsafe_allow_html=True)
+    elif n:
+        st.markdown(f'<p class="nota-form">{n} foto{"s" if n != 1 else ""} '
+                    f'elegida{"s" if n != 1 else ""}.</p>', unsafe_allow_html=True)
+    ok = st.checkbox("Entendido: revisaré las prendas en Mi armario",
+                     key=f"arm_varias_ok_{kv}")
+    b1, b2 = st.columns([1.5, 1])
+    subir = b1.button(f"Subir {n} prenda{'s' if n != 1 else ''}" if n else "Subir",
+                      type="primary", use_container_width=True, key=f"arm_varias_go_{kv}",
+                      disabled=not (n and ok and n <= MAX_VARIAS))
+    if b2.button("Cancelar", use_container_width=True, key=f"arm_varias_x_{kv}"):
+        st.rerun()
+    if not subir:
+        return
+
+    barra = st.progress(0.0, text="Preparando las fotos…")
+    prep, malas = [], []
+    for f in fotos:
+        jpeg, err = _previa(f.getvalue())
+        (malas.append(f.name) if err else prep.append((f, jpeg)))
+    modelo = gemini.elegir_modelo()
+    barra.progress(0.1, text="La IA está mirando las fotos (de diez en diez)…")
+    try:
+        etiquetas.analizar_lote([j for _, j in prep], modelo, aviso=lambda *_: None)
+        barra.progress(0.35, text="Rasgos de estilo…")
+        etiquetas.rasgos_lote([j for _, j in prep], modelo, aviso=lambda *_: None)
+    except gemini.ErrorGemini as e:
+        st.markdown(f'<p class="rot" style="color:var(--burdeos);">La IA no responde: '
+                    f'{_html.escape(gemini.resumen_error(e))}. No se ha subido nada.</p>',
+                    unsafe_allow_html=True)
+        return
+    hechas, sin_tipo = [], []
+    for i, (f, jpeg) in enumerate(prep, 1):
+        barra.progress(0.4 + 0.6 * i / len(prep), text=f"Guardando {i} de {len(prep)}…")
+        e = etiquetas.en_cache(jpeg, modelo)
+        pieza = (e or {}).get("piezas", [None])[0] if (e or {}).get("piezas") else None
+        cat = (pieza or {}).get("tipo")
+        if cat not in POSICION:
+            sin_tipo.append(f.name)
+            continue
+        ras = etiquetas.rasgos_en_cache(jpeg)
+        try:
+            armario.anadir(BD_USUARIOS, DATOS, uid, cat, POSICION[cat], f.getvalue(),
+                           _vectorizar, {}, etiquetas={**pieza, "rasgos": ras} if ras else pieza)
+            hechas.append(cat)
+        except ValueError:
+            malas.append(f.name)
+    partes = [f"{len(hechas)} prenda{'s' if len(hechas) != 1 else ''} añadida"
+              f"{'s' if len(hechas) != 1 else ''}. Revísalas en Detalles: la IA puede "
+              "equivocarse, y la talla la pones tú."]
+    if sin_tipo:
+        partes.append(f"La IA no ha reconocido qué prenda es en {len(sin_tipo)} "
+                      f"({', '.join(sin_tipo[:4])}{'…' if len(sin_tipo) > 4 else ''}): "
+                      "súbelas una a una.")
+    if malas:
+        partes.append(f"{len(malas)} foto{'s' if len(malas) != 1 else ''} no se "
+                      f"ha{'n' if len(malas) != 1 else ''} podido leer.")
+    # No es un aviso de un segundo: se queda arriba hasta que se cierra.
+    st.session_state["aviso_varias"] = partes
+    st.session_state["arm_kv"] = kv + 1
+    st.rerun()
 
 
 @st.dialog("Quitar prenda")
@@ -526,6 +640,14 @@ def mi_armario():
     aviso = st.session_state.pop("aviso_armario", None)
     if aviso:
         st.toast(aviso)
+    varias = st.session_state.get("aviso_varias")
+    if varias:
+        st.markdown('<div style="height:18px;"></div><div class="aviso" style="max-width:80ch;">'
+                    + "".join(f'<p class="cuerpo" style="margin:0 0 6px 0;">{_html.escape(t)}</p>'
+                              for t in varias) + '</div>', unsafe_allow_html=True)
+        if st.button("Entendido", type="tertiary", key="arm_varias_cerrar"):
+            st.session_state.pop("aviso_varias", None)
+            st.rerun()
 
     n = len(arm)
     por_pos = arm["posicion"].value_counts().to_dict() if n else {}

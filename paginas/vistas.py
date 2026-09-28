@@ -133,15 +133,13 @@ def inicio():
         with st.container(key="cupula_ini"):
             componentes.html(cupula.html(malla, rellenar, alto=520), height=528)
         if rellenar:
-            pie_fig = (f'{len(rellenar)} posiciones rellenas, una por prenda '
-                       f'de tu armario · cada prenda ocupa la más próxima a su '
-                       f'vector real, proyectado sobre la base PCA del corpus '
-                       f'de catálogo — tres componentes, {explicada*100:.1f} % '
-                       f'de la varianza')
+            pie_fig = (f'{len(rellenar)} puntos encendidos, uno por cada prenda '
+                       f'de tu armario · cada prenda va al punto más cercano a su '
+                       f'vector real, pasado a 3D con PCA sobre el catálogo '
+                       f'(tres componentes, {explicada*100:.1f} % de la varianza)')
         else:
-            pie_fig = (f'Retículo de {len(malla)} posiciones sobre la esfera '
-                       f'unidad, todas vacías · inicia sesión y se rellenan '
-                       f'tantas como prendas tengas')
+            pie_fig = (f'Una esfera con {len(malla)} puntos, todos apagados · '
+                       f'cuando entras se encienden tantos como prendas tengas')
         st.markdown(f'<p class="marca-agua">{pie_fig}</p>',
                     unsafe_allow_html=True)
 
@@ -158,12 +156,13 @@ def inicio():
         '<p class="grande"><i>cos</i> θ</p>'
         '<p class="sub">‖ v ‖ = 1 para cada prenda</p></div><div>'
         '<h3>Por qué una esfera</h3>'
-        '<p class="txt">Cada prenda es un vector de norma 1, así que todas viven '
-        'sobre la superficie de una esfera. Parecerse es estar cerca: la similitud '
-        'con la que se ordenan los resultados es el coseno del ángulo entre dos '
-        'puntos. El retículo es estructura; lo que es dato es qué posiciones se '
-        'rellenan, una por prenda. Si tus prendas se amontonan en una zona, eso es '
-        'el salto de dominio que mide este trabajo.</p>'
+        '<p class="txt">Cada prenda se convierte en un vector de longitud 1, así '
+        'que todas acaban en la superficie de una esfera. Que dos prendas se '
+        'parezcan es que estén cerca, y lo que uso para ordenar los resultados es '
+        'el coseno del ángulo entre ellas. La malla es solo el dibujo. Lo que es '
+        'dato real es qué puntos se encienden, uno por prenda. Si tus prendas '
+        'salen todas amontonadas en una zona, eso es el salto de dominio que mido '
+        'en este trabajo.</p>'
         '</div></div></article>'
         '<article class="idea">'
         '<p class="idx">02 · El nombre</p>'
@@ -172,10 +171,11 @@ def inicio():
         '<p class="sub">/əˈkɪn/ · adjetivo<br>del inglés <i>of kin</i>, «de la familia»</p>'
         '</div><div>'
         '<h3>Por qué Akin</h3>'
-        '<p class="txt">Emparentado, de la misma familia: parecido. Es lo que hace la '
-        'aplicación. Buscas una prenda que te gusta y Akin encuentra en tu armario '
-        'las que son de su familia. En la esfera de arriba, lo que es <i>akin</i> '
-        'está cerca: las dos ideas son la misma.</p>'
+        '<p class="txt">Quiere decir emparentado, de la misma familia. O sea, '
+        'parecido. Es justo lo que hace la app: le enseñas una prenda que te gusta '
+        'y busca en tu armario las que son de su familia. Y en la esfera de arriba, '
+        'lo que es <i>akin</i> está cerca. Al final es la misma idea contada dos '
+        'veces.</p>'
         '</div></div></article>'
         '</section>', unsafe_allow_html=True)
 
@@ -184,27 +184,26 @@ def inicio():
                 '<p class="rot-f revela" style="margin-bottom:18px;">Cómo '
                 'funciona</p>' +
                 _tarjetas(4, [
-                    '<div class="n">01</div><h3>Digitalizas el armario</h3>'
-                    '<p>Una foto por prenda, extendida sobre una superficie '
-                    'lisa. Una IA de visión la describe —tipo, color, '
-                    'tejido— y tú corriges lo que haga falta: lo que '
-                    'declaras manda.</p>',
-                    '<div class="n">02</div><h3>Se proyecta el espacio</h3>'
-                    '<p>CLIP ViT-B/32 congelado convierte cada foto en un '
-                    'vector de 512 dimensiones. Encima, una proyección '
-                    'supervisada de 128 dimensiones entrenada sobre '
-                    'DeepFashion reordena ese espacio para que la distancia '
-                    'signifique parecido de prenda.</p>',
+                    '<div class="n">01</div><h3>Subes tu armario</h3>'
+                    '<p>Una foto por prenda, extendida sobre algo liso. Puedes '
+                    'subirlas de una en una o varias de golpe. La IA describe '
+                    'cada una (tipo, color, tejido) y tú corriges lo que esté '
+                    'mal. Lo que pones tú manda.</p>',
+                    '<div class="n">02</div><h3>Cada prenda, un vector</h3>'
+                    '<p>CLIP convierte cada foto en un vector de 512 números. '
+                    'Encima entrené una capa pequeña con DeepFashion que lo '
+                    'reduce a 128 y lo reordena, para que estar cerca '
+                    'signifique parecerse como prenda.</p>',
                     '<div class="n">03</div><h3>Desde una foto</h3>'
-                    '<p>La foto se corta por zonas y cada una se compara solo '
-                    'con tus prendas de esa posición. Primero lo que es la '
-                    'misma clase de prenda; después, lo más parecido, o lo '
-                    'del mismo color o tela si lo pides.</p>',
+                    '<p>Akin corta la foto por zonas y cada zona solo se '
+                    'compara con tus prendas de ese sitio. Primero la misma '
+                    'clase de prenda y después lo más parecido, o lo del '
+                    'mismo color o tela si lo pides.</p>',
                     '<div class="n">04</div><h3>Por estilo</h3>'
-                    '<p>Eliges un estilo y, si quieres, un color. Reglas de '
-                    'estilista escritas en el código montan los conjuntos, '
-                    'con las paletas del diccionario de colores de Sanzo '
-                    'Wada.</p>']),
+                    '<p>Eliges un estilo y, si quieres, un color. Los '
+                    'conjuntos los montan reglas de estilista que escribí yo, '
+                    'con las paletas de Sanzo Wada, un diccionario japonés de '
+                    'combinaciones de color.</p>']),
                 unsafe_allow_html=True)
 
     # Franja oscura: corta el beige a media pagina y da el unico momento de
@@ -215,9 +214,9 @@ def inicio():
     # se repite en ninguna otra pagina.
     st.markdown(_franja(
         'No te vende nada.<br>Te enseña <em>lo que ya tienes</em>.',
-        'La mayoría de los sistemas de moda existen para venderte algo. Este '
-        'empieza por el armario que ya has pagado, y solo mira fuera cuando '
-        'dentro no hay nada que se parezca.'), unsafe_allow_html=True)
+        'Casi todas las apps de moda están hechas para venderte algo. Esta '
+        'empieza por el armario que ya has pagado, y la idea es que solo mire '
+        'fuera cuando dentro no haya nada parecido.'), unsafe_allow_html=True)
 
     # Aquí NO van fotos de prendas: son del armario de una persona concreta
     # y la portada la ve cualquiera sin haber entrado. Viven en Mi armario.
@@ -230,12 +229,12 @@ def inicio():
                 '<p class="rot-f revela" style="margin-bottom:8px;">Estado del '
                 'proyecto</p>'
                 '<div class="aviso revela" style="max-width:66ch;">'
-                '<p class="cuerpo revela">Primera versión. Es el prototipo de un '
-                'Trabajo de Fin de Máster, no un producto. Lo que se ha medido '
-                'es el orden de la búsqueda desde una foto; los conjuntos por '
-                'estilo salen de reglas escritas y todavía no tienen medida. '
-                'La página de <b>resultados y límites</b> detalla qué funciona, '
-                'con cuánta confianza, y qué no se ha construido.</p></div>',
+                '<p class="cuerpo revela">Es una primera versión: el prototipo de '
+                'un TFM, no un producto terminado. Lo que he medido es el orden '
+                'de la búsqueda desde una foto. Los conjuntos por estilo salen de '
+                'reglas escritas y todavía no tienen medida. En <b>Resultados y '
+                'límites</b> está qué funciona, con cuánta confianza, y qué no he '
+                'construido.</p></div>',
                 unsafe_allow_html=True)
 
     st.markdown(_nav(0),
@@ -254,77 +253,81 @@ def sistema():
                 '<p class="seccion revela" style="margin-top:20px;">El sistema por '
                 'dentro</p>'
                 '<p class="cuerpo revela" style="max-width:62ch;font-size:13.5px;'
-                'line-height:21px;">Todo el recorrido, desde una fotografía '
-                'hasta una lista ordenada. Cada pieza está aquí porque mejora '
-                'una métrica o porque sostiene una decisión; ninguna está por '
-                'completar el diagrama.</p>'
+                'line-height:21px;">Todo el camino, desde que haces la foto '
+                'hasta que sale la lista ordenada. Cada pieza está porque mejora '
+                'una métrica o porque sostiene una decisión, no por rellenar el '
+                'diagrama.</p>'
                 '<div style="height:34px;"></div>', unsafe_allow_html=True)
 
     st.markdown('<p class="rot-f revela" style="margin-bottom:8px;">La tubería</p>' +
                 _tarjetas(3, [
                     '<div class="n">01</div><h3>Captura</h3><p>Una foto por '
-                    'prenda, extendida sobre un fondo liso. Las 118 prendas '
-                    'del autor tienen dos tomas: la segunda no es un '
-                    'duplicado, sirve para medir el suelo de ruido del '
-                    'sistema.</p>',
+                    'prenda, extendida sobre un fondo liso. Mis 118 prendas '
+                    'tienen dos fotos cada una. La segunda no está repetida: '
+                    'me sirve para medir cuánto ruido hay entre dos fotos de '
+                    'la misma prenda.</p>',
                     '<div class="n">02</div><h3>Descripción</h3><p>Gemini '
-                    'describe cada foto con listas cerradas: tipo, manga, '
-                    'largo, color, estampado y tejido. Medido contra las '
-                    'anotaciones del autor: tipo 105/118, manga 25/27. Lo '
-                    'que declara el usuario corrige a la IA.</p>',
+                    'describe cada foto eligiendo de listas cerradas: tipo, '
+                    'manga, largo, color, estampado y tejido. Comparado con lo '
+                    'que anoté yo a mano, acierta el tipo en 105 de 118 y la '
+                    'manga en 25 de 27. Si el usuario corrige algo, manda lo '
+                    'suyo.</p>',
                     '<div class="n">03</div><h3>Codificación</h3><p>CLIP '
-                    'ViT-B/32 <b>congelado</b>. No se reentrena el backbone: '
-                    'exige semanas de cómputo y más datos de los que hay, y '
-                    'sin congelarlo no se puede atribuir la mejora a la '
-                    'proyección.</p>',
-                    '<div class="n">04</div><h3>Proyección</h3><p>Una cabeza '
-                    'ligera de 512 a 128 dimensiones, entrenada con pérdida '
-                    'contrastiva sobre las etiquetas de DeepFashion. Se '
-                    'entrenaron dos variantes: una conjunta y tres '
-                    'específicas por atributo.</p>',
+                    'ViT-B/32 <b>congelado</b>. No lo reentreno por dos '
+                    'motivos: harían falta semanas de cómputo y más datos de '
+                    'los que tengo, y si lo tocara no sabría si la mejora '
+                    'viene de ahí o de mi proyección.</p>',
+                    '<div class="n">04</div><h3>Proyección</h3><p>Una capa '
+                    'ligera que pasa de 512 a 128 dimensiones, entrenada con '
+                    'pérdida contrastiva sobre las etiquetas de DeepFashion. '
+                    'Entrené dos versiones: una conjunta y otra con tres '
+                    'cabezas, una por atributo.</p>',
                     '<div class="n">05</div><h3>Búsqueda desde una foto</h3>'
-                    '<p>La foto se corta por zonas y por capas (lo de debajo, '
-                    'lo de encima). Cada zona se compara con las prendas de su '
-                    'posición: primero la misma clase de prenda, manga y '
-                    'largo; después el parecido, o el color o la tela si el '
-                    'usuario lo elige.</p>',
+                    '<p>La foto se corta por zonas y por capas (lo de debajo y '
+                    'lo de encima). Cada zona se compara con tus prendas de '
+                    'ese sitio: primero la misma clase de prenda, manga y '
+                    'largo, y después lo más parecido, o el color o la tela si '
+                    'lo eliges.</p>',
                     '<div class="n">06</div><h3>Conjuntos por estilo</h3>'
-                    '<p>Reglas explícitas por estilo (qué prendas, cuántos '
-                    'colores, qué estampados) y las 348 paletas del '
-                    'diccionario de Sanzo Wada. Mismo armario, mismo '
-                    'resultado; cada conjunto lleva sus razones.</p>']),
+                    '<p>Reglas escritas para cada estilo (qué prendas, cuántos '
+                    'colores, qué estampados, cuánta formalidad) y las 348 '
+                    'paletas de Sanzo Wada. Con el mismo armario y la misma '
+                    'semilla sale lo mismo, y cada conjunto dice por qué.</p>']),
                 unsafe_allow_html=True)
 
     st.markdown('<div style="height:48px;"></div>'
                 '<p class="rot-f revela" style="margin-bottom:8px;">Decisiones que '
                 'hay que poder defender</p>' +
                 _tarjetas(3, [
-                    '<h4>Backbone congelado</h4><p>Si se afina el backbone, '
-                    'cualquier mejora puede venir de ahí. Congelándolo, la '
-                    'diferencia entre condiciones solo puede atribuirse a la '
-                    'proyección, que es lo que se quiere medir.</p>',
+                    '<h4>Backbone congelado</h4><p>Si hubiera afinado el '
+                    'backbone, cualquier mejora podría venir de ahí. Al '
+                    'dejarlo congelado, la diferencia entre versiones solo '
+                    'puede venir de la proyección, que es justo lo que quiero '
+                    'medir.</p>',
                     '<h4>La regla, antes que el número</h4><p>Cada cambio en '
-                    'el orden de la búsqueda se midió con una regla escrita '
-                    'antes de ver el resultado. Dos propuestas no la pasaron '
-                    'y se quedaron fuera, aunque en uso parecían mejores; la '
-                    'última se probó con fotos nuevas, recogidas después.</p>',
-                    '<h4>SQLite y no pgvector</h4><p>Cada usuario busca en '
-                    'su armario, del orden de cien prendas: la búsqueda '
-                    'exacta tarda milisegundos y un índice aproximado no '
-                    'mejora nada medible. El esquema es el de la entrega 3 y '
-                    'se puede llevar a PostgreSQL sin cambiarlo.</p>']),
+                    'el orden de la búsqueda lo medí con una regla que escribí '
+                    'antes de ver el resultado. Dos propuestas no la pasaron y '
+                    'se quedaron fuera, aunque usándolas parecían mejores. La '
+                    'última la probé con fotos nuevas, sacadas después.</p>',
+                    '<h4>SQLite y no pgvector</h4><p>Cada usuario busca solo '
+                    'en su armario, unas cien prendas. Compararlas todas una a '
+                    'una tarda milisegundos, así que un índice aproximado no mejora nada '
+                    'que se pueda medir. El esquema es el de la entrega 3 y se '
+                    'puede pasar a PostgreSQL sin tocarlo.</p>']),
                 unsafe_allow_html=True)
 
     st.markdown(_franja(
         'La IA describe y traduce.<br>'
         'Nunca <em>decide</em>.',
-        'Gemini describe las fotos y traduce «una cena informal, algo en '
-        'azul» a las opciones de la pantalla, que el usuario ve y puede '
-        'cambiar. Lo que no hace en ningún punto es elegir qué prenda sale ni '
-        'en qué orden: eso lo deciden los vectores y unas reglas escritas, '
-        'porque tiene que ser reproducible y evaluable, y dos respuestas de un '
-        'modelo de lenguaje pueden diferir sin que haya métrica que las '
-        'compare.'), unsafe_allow_html=True)
+        'Gemini describe las fotos (tipo, color, si tiene capucha o un gráfico '
+        'grande) y traduce cosas como «una cena informal, algo en azul» a las '
+        'opciones de la pantalla, que puedes ver y cambiar. Lo que no hace nunca '
+        'es elegir qué prenda sale ni en qué orden. La IA dice lo que ve, y lo '
+        'que se hace con eso lo deciden los vectores y unas reglas escritas, '
+        'porque tiene que ser '
+        'reproducible y se tiene que poder evaluar. Si le preguntas dos veces a '
+        'un modelo de lenguaje te puede contestar distinto, y no hay métrica '
+        'para comparar eso.'), unsafe_allow_html=True)
 
     st.markdown('<div style="height:48px;"></div>'
                 '<p class="rot-f revela" style="margin-bottom:10px;">Herramientas'
@@ -366,11 +369,11 @@ def resultados():
                 '<p class="seccion revela" style="margin-top:20px;">Resultados y '
                 'límites</p>'
                 '<p class="cuerpo revela" style="max-width:62ch;font-size:13.5px;'
-                'line-height:21px;">Lo que el sistema hace bien, lo que hace '
-                'mal y lo que no se puede afirmar con los datos que hay. Los '
-                'resultados negativos están aquí con el mismo detalle que los '
-                'positivos: un resultado negativo bien medido es un '
-                'resultado.</p><div style="height:34px;"></div>',
+                'line-height:21px;">Lo que hace bien, lo que hace mal y lo que '
+                'no puedo afirmar con los datos que tengo. Los resultados '
+                'negativos están con el mismo detalle que los positivos, porque '
+                'un resultado negativo bien medido también es un resultado.</p>'
+                '<div style="height:34px;"></div>',
                 unsafe_allow_html=True)
 
     st.markdown('<p class="rot-f revela" style="margin-bottom:10px;">Qué aporta cada '
@@ -384,10 +387,11 @@ def resultados():
             '<span><b>+0,0217</b> · significativo</span></div>'
             '<div class="dato revela"><span>Atributos no vistos</span>'
             '<span><b>+0,0132</b> · significativo</span></div>'
-            '<p class="cuerpo revela" style="margin-top:12px;">Supervisar el espacio '
-            'funciona, y la mejora sobrevive a vocabulario que el modelo no vio '
-            'al entrenar. Ese segundo número es el que importa: sin él, la '
-            'mejora podría ser memorización.</p>', unsafe_allow_html=True)
+            '<p class="cuerpo revela" style="margin-top:12px;">Entrenar la '
+            'proyección funciona, y la mejora se mantiene con atributos que el '
+            'modelo no vio al entrenar. Ese segundo número es el importante: sin '
+            'él, podría ser que el modelo solo hubiera memorizado.</p>',
+            unsafe_allow_html=True)
     with b:
         st.markdown(
             '<p class="rot" style="margin-bottom:6px;">Cabezas por atributo '
@@ -396,11 +400,11 @@ def resultados():
             '<span>+0,0035</span></div>'
             '<div class="dato revela"><span>Atributos no vistos</span>'
             '<span>−0,0058 · no significativo</span></div>'
-            '<p class="cuerpo revela" style="margin-top:12px;">La contribución '
-            'original del trabajo <b>no gana</b>. Desacoplar por atributo '
-            'mejora solo sobre el vocabulario con el que se entrenó, y fuera de '
-            'él no se distingue del ruido. Es una mejora de especialización, no '
-            'de representación, y se reporta como tal.</p>',
+            '<p class="cuerpo revela" style="margin-top:12px;">Lo que yo '
+            'proponía al principio, una cabeza por atributo, <b>no gana</b>. '
+            'Solo mejora con el vocabulario con el que se entrenó, y fuera de ahí '
+            'no se distingue del ruido. Se especializa, pero no representa '
+            'mejor, y así lo cuento.</p>',
             unsafe_allow_html=True)
 
     st.markdown('<div style="height:44px;"></div>'
@@ -409,42 +413,42 @@ def resultados():
                 '<p class="cuerpo revela" style="max-width:64ch;'
                 'margin-bottom:14px;">Parejas reales de una tienda: la foto de '
                 'un modelo con la prenda puesta y la foto de producto de esa '
-                'prenda, escondida entre las del autor. ¿Sale la primera? '
-                'Medido en dos tandas, la segunda con fotos recogidas después '
-                'de fijar la regla.</p>' +
+                'misma prenda, escondida entre las mías. ¿Sale la primera? Lo '
+                'medí en dos tandas, la segunda con fotos que recogí después de '
+                'fijar la regla.</p>' +
                 _tarjetas(3, [
-                    '<h4>La proyección gana a CLIP plano</h4><p>Con fotos '
-                    'nuevas, 30 parejas y 172 prendas: la prenda exacta sale '
+                    '<h4>La proyección gana a CLIP solo</h4><p>Con las fotos '
+                    'nuevas (30 parejas, 172 prendas), la prenda exacta sale '
                     '<b>primera 22 veces</b> frente a 19, y entre las tres '
-                    'primeras 27 frente a 23. El azar acertaría el 2 %. En la '
+                    'primeras 27 frente a 23. Al azar acertaría un 2 %. En la '
                     'primera tanda, 17 frente a 16 y 22 frente a 18.</p>',
                     '<h4>El color, como opción</h4><p>Ordenar primero por '
-                    'color empata con el orden por defecto: 41 frente a 40 '
-                    'aciertos sumando las dos tandas. Falla cuando el color se '
-                    'lee mal en la foto del modelo, sobre todo con negros. Por '
-                    'eso no va por defecto y el usuario lo elige.</p>',
-                    '<h4>El color de la IA no mejora</h4><p>Leer el color con '
-                    'Gemini en vez de con los píxeles se probó con parejas '
-                    'nuevas y una regla escrita antes: 20 aciertos frente a '
-                    '23. No entra. Un resultado negativo medido con el mismo '
-                    'cuidado que los positivos.</p>']) +
+                    'color empata con el orden normal: 41 aciertos frente a 40 '
+                    'sumando las dos tandas. Falla cuando el color se ve mal en '
+                    'la foto del modelo, sobre todo con los negros. Por eso no '
+                    'va por defecto y lo eliges tú.</p>',
+                    '<h4>El color de la IA no mejora</h4><p>Probé a leer el '
+                    'color con Gemini en vez de con los píxeles, con parejas '
+                    'nuevas y la regla escrita antes: 20 aciertos frente a 23. '
+                    'No entra. Lo cuento igual que los que salieron bien.</p>']) +
                 '<div style="height:44px;"></div>'
                 '<p class="rot-f revela" style="margin-bottom:8px;">El salto de '
                 'dominio</p>' +
                 _tarjetas(3, [
-                    '<h4>Suelo de ruido</h4><p>Dos tomas de la misma prenda '
+                    '<h4>Suelo de ruido</h4><p>Dos fotos de la misma prenda '
                     'quedan a 0,991–0,995 de similitud. Dos prendas distintas '
-                    'llegan a 0,925–0,951 en el percentil 95. El margen útil '
-                    'es de apenas 0,044–0,069: el armario está muy concentrado '
-                    'en el espacio.</p>',
-                    '<h4>Separabilidad</h4><p>Una sonda lineal distingue '
-                    'fotografía de catálogo de fotografía de móvil con AUC '
-                    '1,000, frente a un nulo por composición de 0,57–0,64. Los '
-                    'dos dominios son trivialmente separables.</p>',
-                    '<h4>Caída en la tarea</h4><p>Sobre el conjunto de test '
-                    'ninguna caída resulta significativa: los intervalos se '
-                    'solapan. Eso es ausencia de evidencia, no evidencia de '
-                    'ausencia, y así se reporta.</p>']),
+                    'llegan a 0,925–0,951 (percentil 95). El margen útil es de '
+                    'solo 0,044–0,069: mi armario está muy apretado en el '
+                    'espacio.</p>',
+                    '<h4>Separabilidad</h4><p>Un clasificador lineal distingue '
+                    'foto de catálogo de foto de móvil con AUC 1,000. Dos '
+                    'grupos de catálogo con prendas distintas a propósito solo '
+                    'se separan con 0,57–0,64. Lo que separa no es la prenda, '
+                    'es el tipo de foto.</p>',
+                    '<h4>Caída en la tarea</h4><p>En el test ninguna caída sale '
+                    'significativa, porque los intervalos se solapan. Eso no '
+                    'quiere decir que no haya caída. Quiere decir que con '
+                    'estos datos no la puedo demostrar.</p>']),
                 unsafe_allow_html=True)
 
     st.markdown('<div style="height:52px;"></div>'
@@ -452,37 +456,35 @@ def resultados():
                 '<p class="rot-f revela" style="margin-bottom:6px;">Lo que no '
                 'salió, y se cuenta igual</p>'
                 '<p class="cuerpo revela" style="max-width:62ch;'
-                'margin-bottom:14px;">Tres cosas que no funcionaron. Están aquí '
-                'desplegables porque cada una tiene su diagnóstico, y un '
-                'resultado negativo sin diagnóstico no vale nada.</p>',
+                'margin-bottom:14px;">Tres cosas que no funcionaron. Cada una '
+                'tiene su explicación dentro, porque un resultado negativo sin '
+                'explicación no sirve de mucho.</p>',
                 unsafe_allow_html=True)
 
     # Acordeon: convierte tres parrafos apretados en algo que se explora, y
     # es la unica pieza de la web con interaccion real ademas de la cupula.
     for titulo, cuerpo in [
         ("El corpus de atributos resultó ser 81–93 % ropa de mujer",
-         "El filtro del análisis exploratorio seleccionaba por nombre de "
-         "categoría, y esos nombres —camisa, pantalón, chaqueta— son unisex. "
-         "No invalida la comparación entre condiciones, porque las tres vieron "
-         "exactamente los mismos datos, pero sí obliga a corregir la "
-         "afirmación de alcance que aparecía en las entregas anteriores. Se "
-         "declara como cuarto factor de confusión del análisis de dominio y no "
-         "se descompone: aislarlo habría costado más de lo que aportaba a dos "
-         "semanas de la entrega."),
+         "En el análisis exploratorio filtré por nombre de categoría (camisa, "
+         "pantalón, chaqueta) y esos nombres son unisex. La comparación entre "
+         "versiones sigue valiendo, porque las tres vieron exactamente los "
+         "mismos datos, pero tuve que corregir lo que decía sobre el alcance "
+         "en las entregas anteriores. Lo apunto como cuarto factor de "
+         "confusión del análisis de dominio y no lo separo: a dos semanas de "
+         "la entrega, aislarlo costaba más de lo que aportaba."),
         ("Etiquetar el género con CLIP sin entrenamiento previo: 29 % frente "
          "a un 89 % de referencia",
-         "La afinidad de base de cada clase domina sobre la variación dentro "
-         "de la clase: la distancia media al texto de una clase (≈0,04) es "
-         "mayor que la desviación típica dentro de ella (≈0,025), así que el "
-         "argumento máximo lo decide la clase, no la imagen. Es un fallo de "
-         "calibración conocido de CLIP en clasificación sin entrenamiento. Se "
-         "reportó y se descartó."),
+         "Cada clase tiene una afinidad de base que pesa más que la foto: la "
+         "diferencia media con el texto de una clase (≈0,04) es mayor que lo "
+         "que varía dentro de ella (≈0,025). Así que quien gana lo decide la "
+         "clase y no la imagen. Es un fallo de calibración conocido de CLIP "
+         "cuando se usa sin entrenar. Lo medí, lo apunté y lo descarté."),
         ("La hipótesis del fondo quedó falsada",
-         "Se sospechaba que la colcha de rayas sobre la que están fotografiadas "
-         "las prendas explicaba parte del salto de dominio. Una ablación "
-         "recortando el fondo no encontró efecto medible en ningún nivel de "
-         "análisis. La hipótesis se descarta y se sustituye por la correlación "
-         "con la categoría, que sí aparece en los datos."),
+         "Pensaba que la colcha de rayas sobre la que hice las fotos explicaba "
+         "parte del salto de dominio. Probé a recortar el fondo y no cambió "
+         "nada medible en ningún nivel del análisis. Así que la descarté y me "
+         "quedé con lo que sí sale en los datos: la relación con la categoría "
+         "de prenda."),
     ]:
         with st.expander(titulo):
             st.markdown(f'<p class="cuerpo revela" style="max-width:74ch;">{cuerpo}'
@@ -493,21 +495,20 @@ def resultados():
                 'no hace</p>' +
                 _celdas("tres", [
                     '<h4>Los conjuntos no están medidos</h4><p>«Por estilo» '
-                    'monta conjuntos con reglas de estilista, no con un modelo '
-                    'aprendido de compatibilidad. Nadie ha medido si aciertan: '
-                    'por eso se guarda cada «me lo pondría» y «no me '
-                    'convence».</p>',
-                    '<h4>No dice si te favorece</h4><p>No hay modelo de '
-                    'adecuación corporal: no existen datos públicos, y uno '
-                    'entrenado sobre juicios estéticos aprendería sesgos por '
-                    'construcción. La altura, si la das, solo activa una regla '
-                    'de proporción que se ve y se apaga. El peso no se '
-                    'pide.</p>',
+                    'monta los conjuntos con reglas de estilista, no con un '
+                    'modelo que haya aprendido qué combina. Nadie ha medido '
+                    'todavía si aciertan. Por eso guardo cada «me lo pondría» '
+                    'y cada «no me convence».</p>',
+                    '<h4>No dice si te favorece</h4><p>No hay un modelo de qué '
+                    'le queda bien a cada cuerpo. No hay datos públicos, y uno '
+                    'entrenado con juicios estéticos aprendería sesgos sí o sí. '
+                    'La altura, si la das, solo activa una regla de proporción '
+                    'que puedes ver y quitar. El peso no lo pido.</p>',
                     '<h4>No lee bien todos los colores</h4><p>El color de la '
                     'foto depende de la luz. Con negros y tonos muy oscuros la '
-                    'diferencia de color se dispara, y en la primera prueba 9 '
-                    'de 24 lecturas cayeron lejos. Por eso el orden por '
-                    'defecto no usa el color.</p>']),
+                    'diferencia se dispara: en la primera prueba, 9 de 24 '
+                    'lecturas salieron muy lejos. Por eso el orden por defecto '
+                    'no usa el color.</p>']),
                 unsafe_allow_html=True)
     st.markdown(_nav(2),
                 unsafe_allow_html=True)
@@ -525,42 +526,40 @@ def futuro():
                 '<p class="seccion revela" style="margin-top:20px;">Hacia dónde '
                 'va</p>'
                 '<p class="cuerpo revela" style="max-width:62ch;font-size:13.5px;'
-                'line-height:21px;">Nada de esta lista está construido. Está '
-                'aquí porque se diseñó y se dejó fuera con una razón, no '
-                'porque se olvidara — y esa distinción importa tanto como lo '
-                'que sí está hecho.</p><div style="height:34px;"></div>',
+                'line-height:21px;">Nada de esta lista está hecho. Está aquí '
+                'porque lo pensé y lo dejé fuera por un motivo, no porque se me '
+                'olvidara. Para mí eso cuenta tanto como lo que sí está '
+                'hecho.</p><div style="height:34px;"></div>',
                 unsafe_allow_html=True)
 
     for n_fila, (titulo, estado, texto) in enumerate([
         ("Medir los conjuntos por estilo", "En marcha · recogiendo datos",
-         "Hoy los monta un conjunto de reglas escritas. Cada «me lo pondría» "
-         "y «no me convence» se guarda con el conjunto y el estilo pedido: con "
-         "suficientes valoraciones se podrá medir qué reglas aciertan y "
-         "ajustar sus pesos con datos, en vez de a ojo."),
+         "Ahora los montan reglas escritas. Cada «me lo pondría» y «no me "
+         "convence» se guarda junto al conjunto y el estilo pedido. Con "
+         "suficientes valoraciones podré medir qué reglas aciertan y ajustar "
+         "sus pesos con datos, en vez de a ojo."),
         ("Compatibilidad aprendida", "Diseñado · sin implementar",
-         "Sustituir las reglas por un módulo entrenado sobre Polyvore con "
-         "partición disjunta que puntúe si dos prendas funcionan juntas. "
-         "Métricas previstas: precisión en «rellena el hueco» y AUC. "
-         "Referencias externas sitúan el estado del arte en torno al 55–62 % "
-         "en esa tarea, cifras para situar un resultado, no para prometerlo."),
+         "Cambiar las reglas por un modelo entrenado con Polyvore (partición "
+         "disjunta) que diga si dos prendas pegan. Lo mediría con «rellena el "
+         "hueco» y AUC. Los trabajos publicados están entre el 55 y el 62 % en "
+         "esa tarea: sirve para situar un resultado, no para prometerlo."),
         ("Decidir el color con más datos", "Siguiente medida",
-         "Ordenar primero por color empató con el orden por defecto en 54 "
-         "consultas. Hace falta un conjunto mayor —y otro con looks de varias "
-         "capas— para decidir sin ambigüedad si debe ir por defecto."),
+         "Ordenar primero por color empató con el orden normal en 54 "
+         "búsquedas. Necesito más parejas, y otras con looks de varias capas, "
+         "para decidir de verdad si tiene que ir por defecto."),
         ("Catálogo comercial y enlace a producto", "Diseñado · sin implementar",
-         "Cuando el armario no cubre una posición, recuperar del catálogo la "
-         "prenda más próxima y enlazar al producto real. Se almacenarían "
-         "embeddings, metadatos y URL. Nunca imágenes: la aplicación las "
-         "cargaría desde el servidor de origen."),
+         "Cuando en tu armario no hay nada para una posición, buscar la prenda "
+         "más parecida en un catálogo y enlazar al producto real. Guardaría "
+         "vectores, datos y la URL. Nunca las imágenes: la app las cargaría "
+         "desde la web de la tienda."),
         ("Servicio y base de datos compartida", "Diseñado · sin implementar",
          "FastAPI para separar el núcleo de la interfaz, y PostgreSQL con "
          "pgvector cuando haya muchos usuarios o un catálogo grande. El "
-         "esquema de la entrega 3 ya es el que usa la aplicación en SQLite."),
+         "esquema de la entrega 3 ya es el que usa la app en SQLite."),
         ("Reducir el salto de dominio", "Línea de investigación abierta",
-         "Es lo que este trabajo midió y no resolvió. Las vías razonables son "
-         "aumentar los datos de entrenamiento con fotografía de prenda "
-         "extendida, o adaptar el dominio con una transformación aprendida "
-         "entre ambos tipos de imagen."),
+         "Es lo que medí y no resolví. Lo razonable sería entrenar con más "
+         "fotos de prenda extendida, como las de un armario de verdad, o "
+         "aprender una transformación entre los dos tipos de foto."),
     ], 1):
         # Número · título · texto · estado, a todo lo ancho. Antes el texto
         # acababa a mitad de pantalla y la otra mitad quedaba vacía.
@@ -600,23 +599,22 @@ def sobre():
         # media columna vacía en pantallas anchas.
         st.markdown(
             '<div class="dos-parrafos revela">'
-            '<p class="cuerpo">Este sistema es el Trabajo de Fin de Máster '
-            'del Máster en Data Science y Desarrollo de IA de Evolve Academy. '
-            'La pregunta de partida era si se puede consultar el parecido '
-            'entre prendas <b>por atributo</b> — parécete al corte, ignora el '
-            'color — sobre un backbone visual congelado, y si eso mejora la '
-            'recuperación frente a usar el embedding tal cual.</p>'
+            '<p class="cuerpo">Me interesa la moda y creo que se puede vestir '
+            'mejor con lo que ya tienes. De ahí sale Akin, mi Trabajo de Fin '
+            'de Máster en Data Science y Desarrollo de IA de Evolve Academy. '
+            'Empecé con una pregunta: ¿se puede buscar el parecido entre '
+            'prendas <b>por atributo</b>, tipo «parécete en el corte, ignora '
+            'el color», sobre un modelo de visión congelado? ¿Y eso mejora la '
+            'búsqueda frente a usar el vector tal cual?</p>'
             # Aqui habia un resumen de los resultados que repetia, con otras
             # palabras, la seccion "Que aporta cada pieza" de la pagina de
             # Resultados. Se queda solo el giro del proyecto, que es contexto
             # y no resultado, y el numero vive en su pagina.
-            '<p class="cuerpo">A mitad de camino, la '
-            'aportación principal cambió: pasó a ser la medición del salto '
-            'entre fotografía de catálogo y fotografía real de armario. No fue '
-            'una salida improvisada — estaba previsto por escrito desde antes '
-            'de tener el primer número, como plan alternativo si la '
-            'contribución original no ganaba. No ganó, y el plan se ejecutó.'
-            '</p></div>',
+            '<p class="cuerpo">A mitad de camino cambió lo principal del '
+            'trabajo: pasó a ser medir el salto entre las fotos de catálogo y '
+            'las fotos reales de un armario. No lo improvisé. Lo tenía escrito '
+            'como plan B desde antes de ver el primer número, por si la idea '
+            'original no ganaba. No ganó, y tiré del plan B.</p></div>',
             unsafe_allow_html=True)
 
         st.markdown('<div style="height:32px;"></div>'
@@ -625,12 +623,12 @@ def sobre():
         for fuente, uso, lic in [
             ("DeepFashion · Category and Attribute Prediction",
              "Supervisión de atributos", "CUHK MMLab · uso académico"),
-            ("Polyvore Outfits", "Compatibilidad · partición disjunta",
-             "CC BY 4.0"),
-            ("Fashion Product Images", "Catálogo",
+            ("Polyvore Outfits", "Compatibilidad · prevista, no usada",
+             "CC BY 4.0 · queda para trabajo futuro"),
+            ("Fashion Product Images", "Catálogo · previsto, no usado",
              "Licencia no declarada · riesgo documentado"),
             ("Armario propio · 118 prendas", "Test fuera de distribución",
-             "Fotografías del autor"),
+             "Fotos mías"),
             ("Parejas modelo / producto · 54", "Evaluación de la búsqueda",
              "Fotos de una tienda · solo en local, no se redistribuyen"),
             ("A Dictionary of Color Combinations", "Paletas de «Por estilo»",
@@ -650,11 +648,12 @@ def sobre():
         st.markdown(
             '<div class="aviso revela" style="margin-top:40px;max-width:72ch;">'
             '<p class="cuerpo revela" style="font-size:14.5px;line-height:23px;">'
-            'Las imágenes de los conjuntos de datos no se '
-            'redistribuyen: el repositorio excluye <code>data/</code> desde el '
-            'primer commit. La licencia no declarada de una de las fuentes '
-            'queda registrada como riesgo y no sería asumible en un uso '
-            'comercial.</p></div>', unsafe_allow_html=True)
+            'Las imágenes de los datasets no se redistribuyen: el repositorio '
+            'deja fuera <code>data/</code> desde el primer commit. Polyvore y '
+            'Fashion Product Images estaban en el plan, pero la compatibilidad '
+            'y el catálogo se quedaron fuera, así que no las llegué a usar. La '
+            'segunda además no declara licencia: para un uso comercial no '
+            'valdría.</p></div>', unsafe_allow_html=True)
 
     with b:
         st.markdown(
@@ -677,10 +676,10 @@ def sobre():
         st.markdown(
             '<div style="height:24px;"></div>'
             '<p class="rot-f revela" style="margin-bottom:8px;">Reproducibilidad</p>'
-            '<p class="cuerpo revela">Semillas y versiones de biblioteca fijadas. '
-            'Cada corrida deja su configuración en YAML y sus métricas al lado, '
-            'en <code>experiments/</code>. Los resultados que aparecen en esta '
-            'aplicación se pueden regenerar desde el repositorio.</p>',
+            '<p class="cuerpo revela">Semillas y versiones de librerías fijadas. '
+            'Cada experimento guarda su configuración en YAML y sus métricas al '
+            'lado, en <code>experiments/</code>. Todos los números de esta app '
+            'se pueden volver a sacar desde el repositorio.</p>',
             unsafe_allow_html=True)
     st.markdown(_nav(4),
                 unsafe_allow_html=True)
@@ -1510,7 +1509,8 @@ def pie(extra: str = ""):
             ("DeepFashion",
              "https://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/"
              "AttributePrediction.html"),
-            ("Polyvore Outfits", "https://github.com/xthan/polyvore-dataset"),
+            ("Diccionario de Wada",
+             "https://github.com/mattdesl/dictionary-of-colour-combinations"),
         ]),
         ("Límites", [("Conjuntos por reglas, sin medir", None),
                      ("Sin adecuación corporal", None),

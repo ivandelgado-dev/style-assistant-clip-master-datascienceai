@@ -43,20 +43,20 @@ CIFRAS = [
     # OJO: el mismo redondeo que en la página de Resultados. Antes la portada
     # decía +0,022 y Resultados +0,0217. Es el mismo número, y verlo escrito
     # de dos formas se lee como descuido, no como estilo.
-    ("+0,0217", "NDCG@10 de la proyección supervisada sobre CLIP plano, en "
-                "atributos vistos. Significativo por bootstrap.",
+    ("+0,0217", "Lo que mejora el NDCG@10 la proyección entrenada frente a "
+                "CLIP solo, en atributos vistos. Significativo con bootstrap.",
      "resultados_modelado.md"),
-    ("22 / 30", "Fotos de modelo en las que tu prenda exacta sale primera "
-                "entre 172. Con CLIP sin proyección, 19. Fotos nuevas, regla "
+    ("22 / 30", "Veces que tu prenda exacta sale primera entre 172, desde la "
+                "foto de un modelo. Con CLIP solo, 19. Fotos nuevas y la regla "
                 "escrita antes.",
      "resultados_busqueda_modelo_producto.md"),
-    ("1,000", "AUC separando fotografía de catálogo de fotografía de móvil. "
-              "El nulo por composición está en 0,57–0,64.",
+    ("1,000", "AUC al distinguir foto de catálogo de foto de móvil. Con "
+              "prendas distintas y la misma clase de foto, 0,57–0,64.",
      "resultados_domain_gap.md"),
     # No es un resultado, es el tamaño del conjunto. Va en la banda porque
     # da la escala con la que leer los otros tres.
-    ("118", "Prendas propias fotografiadas, dos tomas cada una, como test "
-            "fuera de distribución. No se usaron para entrenar.",
+    ("118", "Prendas mías, con dos fotos cada una, para probar el sistema "
+            "fuera de lo que vio al entrenar. No se usaron para entrenar.",
      "protocolo_armario.md"),
 ]
 
