@@ -1417,59 +1417,66 @@ def buscar():
                     + busqueda.html_resultado(columnas),
                     unsafe_allow_html=True)
 
-        # ------------------------------------------------ ajuste en palabras
+        # ------------------------------------------------ pídelo con palabras
         # La IA traduce la petición a cambios sobre lo buscado («manga
         # larga», «más oscuro») y se vuelve a ordenar. No elige prendas.
+        # Va en el panel de la izquierda, igual que en «Por estilo»: mismo
+        # nombre, misma caja y mismo botón en las dos pantallas (antes aquí era
+        # «¿Algo distinto?» debajo de los resultados, y allí otra cosa).
         if etq_ref is not None:
-            st.markdown('<div style="height:34px;"></div>'
-                        '<p class="rot-f" style="margin-bottom:6px;">¿Algo '
-                        'distinto?</p>', unsafe_allow_html=True)
-            with st.form(f"b_form_{huella}", border=False, clear_on_submit=True):
-                c1, c2 = st.columns([4, 1], vertical_alignment="bottom")
-                texto = c1.text_input(
-                    "Pídelo", label_visibility="collapsed",
-                    placeholder="Por ejemplo: de manga larga, más oscuro, "
-                                "sin estampado, un vaquero corto…")
-                enviar = c2.form_submit_button("Ajustar", type="primary",
-                                               use_container_width=True)
-            if enviar and texto.strip():
-                import json as _json
-                with st.spinner("Entendiendo lo que pides…"):
-                    aj = busqueda.interpretar(
-                        texto.strip(), _json.dumps(etq_ref.get("piezas", []),
-                                                   ensure_ascii=False))
-                if aj and aj.get("entendido"):
-                    ajustes.append(aj)
-                    # Las prendas sin describir no se pueden comparar con
-                    # «más oscuro»: se describen ahora, de diez en diez.
-                    # Sin describir por la IA (en la base; la tabla ya lleva
-                    # etiquetas mínimas sacadas de la categoría).
-                    if armario.sin_etiquetas(BD_USUARIOS, u["id"]):
-                        from paginas.nucleo import describir_pendientes_lote
-                        with st.spinner("Describiendo tus prendas…"):
-                            describir_pendientes_lote(u["id"])
-                    st.rerun()
-                st.markdown('<p class="nota-form">No he entendido eso como un '
-                            'cambio en la ropa. Prueba con el color, la manga, '
-                            'el largo o el estampado.</p>', unsafe_allow_html=True)
-            if ajustes:
-                cambios = []
-                for aj in ajustes:
-                    for k, v in aj.items():
-                        if k in ("posicion", "entendido"):
-                            continue
-                        cambios.append({"manga": f"manga {v}",
-                                        "largo": f"largo {v}",
-                                        "tipo": busqueda.nombre(v).lower()
-                                        }.get(k, v.replace("_", " ")))
-                c1, c2 = st.columns([4, 1], vertical_alignment="center")
-                c1.markdown(f'<p class="nota-form" style="margin:0;"><b>Ajustado:'
-                            f'</b> {_html.escape(", ".join(cambios))}</p>',
-                            unsafe_allow_html=True)
-                if c2.button("Quitar ajustes", type="tertiary",
-                             key=f"b_quitar_{huella}"):
-                    st.session_state[clave_aj] = []
-                    st.rerun()
+            with panel:
+                st.markdown('<div style="height:18px;"></div>'
+                            '<p class="rot-f" style="margin-bottom:6px;">Pídelo con '
+                            'tus palabras</p>', unsafe_allow_html=True)
+                with st.form(f"b_form_{huella}", border=False, clear_on_submit=True):
+                    texto = st.text_area(
+                        "Pídelo", label_visibility="collapsed", height=76,
+                        max_chars=200,
+                        placeholder="Por ejemplo: de manga larga, más oscuro, "
+                                    "sin estampado, un vaquero corto…")
+                    enviar = st.form_submit_button("Aplicar",
+                                                   use_container_width=True)
+                st.markdown('<p class="nota-form">La IA cambia lo que se busca (manga, '
+                            'largo, color, estampado…); el orden lo deciden los '
+                            'vectores.</p>', unsafe_allow_html=True)
+                if enviar and texto.strip():
+                    import json as _json
+                    with st.spinner("Entendiendo lo que pides…"):
+                        aj = busqueda.interpretar(
+                            texto.strip(), _json.dumps(etq_ref.get("piezas", []),
+                                                       ensure_ascii=False))
+                    if aj and aj.get("entendido"):
+                        ajustes.append(aj)
+                        # Las prendas sin describir no se pueden comparar con
+                        # «más oscuro»: se describen ahora, de diez en diez.
+                        # Sin describir por la IA (en la base; la tabla ya lleva
+                        # etiquetas mínimas sacadas de la categoría).
+                        if armario.sin_etiquetas(BD_USUARIOS, u["id"]):
+                            from paginas.nucleo import describir_pendientes_lote
+                            with st.spinner("Describiendo tus prendas…"):
+                                describir_pendientes_lote(u["id"])
+                        st.rerun()
+                    st.markdown('<p class="nota-form">No he entendido eso como un '
+                                'cambio en la ropa. Prueba con el color, la manga, '
+                                'el largo o el estampado.</p>', unsafe_allow_html=True)
+                if ajustes:
+                    cambios = []
+                    for aj in ajustes:
+                        for k, v in aj.items():
+                            if k in ("posicion", "entendido"):
+                                continue
+                            cambios.append({"manga": f"manga {v}",
+                                            "largo": f"largo {v}",
+                                            "tipo": busqueda.nombre(v).lower()
+                                            }.get(k, v.replace("_", " ")))
+                    st.markdown(f'<p class="nota-form" style="margin:0;"><b style="'
+                                f'color:var(--burdeos);">Ajustado: '
+                                f'{_html.escape(", ".join(cambios))}.</b></p>',
+                                unsafe_allow_html=True)
+                    if st.button("Quitar", type="tertiary",
+                                 key=f"b_quitar_{huella}"):
+                        st.session_state[clave_aj] = []
+                        st.rerun()
             st.markdown('<p class="nota-form" style="margin-top:14px;">La foto '
                         'se envía a Gemini (Google) para describirla. Con la '
                         'clave gratuita, Google puede usarla para mejorar sus '

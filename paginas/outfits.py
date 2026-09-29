@@ -615,7 +615,8 @@ def _pide(p: dict, color_pedido: str | None) -> bool:
 def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
             con_encima: bool | None = None, solo_wada: bool = False,
             n: int = 8, max_repeticion: int = 2, altura: int | None = None,
-            ancla: int | None = None, forzar: bool = False, semilla: int = 0) -> dict:
+            ancla: int | None = None, forzar: bool = False, semilla: int = 0,
+            manga: str | None = None, largo: str | None = None) -> dict:
     """Outfits ordenados. Devuelve {"outfits": [...], "faltan": [...], "aviso": str|None}.
 
     Cada outfit: {"prendas": {posicion: índice en `prendas`}, "puntos",
@@ -627,6 +628,10 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
     solo al resto. `semilla`: 0 = los mejores, en orden; otra = otra tanda de
     propuestas, muestreadas en proporción a su puntuación (Gumbel top-k). La
     misma semilla da la misma tanda: sigue siendo reproducible.
+
+    `manga` ("corta" / "larga") filtra lo de arriba y `largo` ("corto" /
+    "largo") lo de abajo: «ropa de verano, nada de largo». La prenda de
+    partida no se filtra: la ha elegido el usuario.
     """
     E = ESTILOS[estilo]
     if con_encima is None:
@@ -643,23 +648,59 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
     def vale(p, pos):
         return afin(p, pos) or (forzar and p is pa)
 
-    A = [p for p in prendas if p["posicion"] == "arriba" and vale(p, "arriba")]
-    B = [p for p in prendas if p["posicion"] == "abajo" and vale(p, "abajo")]
+    def manga_ok(p):
+        if p is pa or not manga:
+            return True
+        return p["manga_corta"] == (manga == "corta")
+
+    def largo_ok(p):
+        if p is pa or not largo:
+            return True
+        return (p["tipo"] == "bermuda") == (largo == "corto")
+
+    A0 = [p for p in prendas if p["posicion"] == "arriba" and vale(p, "arriba")]
+    B0 = [p for p in prendas if p["posicion"] == "abajo" and vale(p, "abajo")]
+    A = [p for p in A0 if manga_ok(p)]
+    B = [p for p in B0 if largo_ok(p)]
+    aviso_filtro = []
+    if A0 and not A:
+        aviso_filtro.append(f"no tienes nada de arriba de manga {manga} para {E['nombre']}")
+    if B0 and not B:
+        aviso_filtro.append(f"no tienes nada de abajo {largo} para {E['nombre']}")
     # Encima: lo guardado encima y lo que, por tipo, se lleva encima en este
     # estilo aunque esté guardado arriba (la sudadera de cremallera).
     C = [p for p in prendas if vale(p, "encima")
          and (p["posicion"] == "encima" or _etq.CAPA.get(p["tipo"], 0) >= 2
               or p["tipo"] == "camisa")]
+    como_capa = False
     if pa is not None:
         # La prenda de partida ocupa su posición y no compite en otra.
+        # Excepción: una camisa, sudadera o jersey guardados «arriba» que el
+        # estilo lleva ENCIMA (la camisa de cuadros abierta del Grunge). Visto
+        # en uso: el veredicto decía «Encaja en Grunge» y luego no salía ningún
+        # look, porque la camisa competía como lo de dentro y Grunge no admite
+        # camisa ahí. Si el estilo la lleva encima (y no la admite arriba, o
+        # se ha pedido capa), va encima y se busca qué ponerse debajo.
+        como_capa = (pa["posicion"] == "arriba" and vale(pa, "encima")
+                     and (pa["tipo"] == "camisa" or _etq.CAPA.get(pa["tipo"], 1) >= 2)
+                     and (con_encima or not vale(pa, "arriba")))
+        # Una sobrecamisa ya es la capa de fuera (capas_ok no deja nada encima
+        # de ella): si el estilo la lleva encima, va encima de una camiseta.
+        if (pa["posicion"] == "arriba" and pa.get("sobrecamisa") and vale(pa, "encima")):
+            como_capa = True
         if pa["posicion"] == "abajo":
             B = [pa] if pa in B else []
         elif pa["posicion"] == "encima":
             C = [pa] if pa in C else []
+        elif como_capa:
+            con_encima = True
+            C = [pa]
+            A = [p for p in A if p is not pa]
         else:
             A = [pa] if pa in A else []
-        A = [p for p in A if p is pa or pa["posicion"] != "arriba"]
-        C = [p for p in C if p is not pa or pa["posicion"] == "encima"]
+        if not como_capa:
+            A = [p for p in A if p is pa or pa["posicion"] != "arriba"]
+            C = [p for p in C if p is not pa or pa["posicion"] == "encima"]
 
     faltan = []
     if not A:
@@ -672,6 +713,10 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
         return {"outfits": [], "faltan": [], "aviso":
                 "Oversize necesita saber qué prendas te quedan holgadas. Márcalo en "
                 "Mi armario, en «Más detalles» → Corte → Holgado."}
+    if aviso_filtro:
+        return {"outfits": [], "faltan": [], "aviso":
+                "Con lo que has pedido, " + " y ".join(aviso_filtro)
+                + ". Quítalo en «Afinar» para ver el resto."}
     if not A or not B:
         return {"outfits": [], "faltan": faltan, "aviso": None}
 
@@ -697,6 +742,32 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
                 razones.append("poco contraste arriba-abajo: alarga la figura")
         return puntos, razones, w
 
+    # Lo de debajo. Una sudadera, un jersey o un cárdigan (capa intermedia) no
+    # van solos: debajo lleva una camiseta, un polo o una camisa. Visto en uso:
+    # el look proponía «sudadera + vaquero» y no decía qué ponerse debajo. Se
+    # elige la base que mejor puntúa con ese arriba y ese abajo (mismas reglas
+    # de estilo, color y capas), y va en el look como «debajo».
+    base_dentro = [p for p in prendas if p["posicion"] == "arriba"
+                   and _etq.CAPA.get(p["tipo"], 1) <= 1 and vale(p, "arriba") and manga_ok(p)
+                   and p is not pa]
+    _deb = {}
+
+    def es_media(p):
+        return _etq.CAPA.get(p["tipo"], 1) == 2
+
+    def debajo_de(a, b):
+        clave = (a["id"], b["id"])
+        if clave not in _deb:
+            mejor = None
+            for d in base_dentro:
+                if d["id"] in clave or not capas_ok(d, a, b):
+                    continue
+                s = puntuar([a, b, d], afin(a, "arriba") + afin(b, "abajo") + afin(d, "arriba"))
+                if s and (mejor is None or (s[0], -d["id"]) > (mejor[1][0], -mejor[0]["id"])):
+                    mejor = (d, s)
+            _deb[clave] = mejor
+        return _deb[clave]
+
     base = []
     for a in A:
         for b in B:
@@ -707,7 +778,10 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
 
     cand = []
     for _, _, _, a, b in base[:400]:
-        opciones = [(None, puntuar([a, b], afin(a, "arriba") + afin(b, "abajo")))]
+        deb = debajo_de(a, b) if es_media(a) else None
+        d = deb[0] if deb else None
+        opciones = [(None, deb[1] if deb else
+                     puntuar([a, b], afin(a, "arriba") + afin(b, "abajo")))]
         if con_encima:
             opciones = []
             for c in C:
@@ -722,18 +796,28 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
                     continue
                 if not capas_ok(a, c, b):
                     continue
-                s = puntuar([a, b, c], afin(a, "arriba") + afin(b, "abajo") + afin(c, "encima"))
+                if d is not None and c["id"] == d["id"]:
+                    continue
+                s = puntuar([a, b, c] + ([d] if d else []),
+                            afin(a, "arriba") + afin(b, "abajo") + afin(c, "encima")
+                            + (afin(d, "arriba") if d else 0))
                 if s:
                     opciones.append((c, s))
         for c, s in opciones:
             if not s:
                 continue
-            ps = [a, b] + ([c] if c else [])
+            ps = [a, b] + ([c] if c else []) + ([d] if d else [])
             if color_pedido and not any(_pide(p, color_pedido) for p in ps):
                 continue
+            razones = list(s[1])
+            if d is not None:
+                razones.append(f"debajo, {_leg(d['tipo'])}")
+            elif es_media(a):
+                razones.append("no tienes nada que encaje debajo: llévala sola")
             cand.append({"prendas": {"arriba": a["i"], "abajo": b["i"],
-                                     **({"encima": c["i"]} if c else {})},
-                         "puntos": round(float(s[0]), 2), "razones": s[1], "wada": s[2],
+                                     **({"encima": c["i"]} if c else {}),
+                                     **({"debajo": d["i"]} if d else {})},
+                         "puntos": round(float(s[0]), 2), "razones": razones, "wada": s[2],
                          "_ids": tuple(p["id"] for p in ps)})
     if pa is not None:
         cand = [o for o in cand if pa["i"] in o["prendas"].values()]
@@ -776,6 +860,19 @@ def generar(prendas: list[dict], estilo: str, color_pedido: str | None = None,
     for o in elegidos:
         o.pop("_ids")
     aviso = None
+    # Con una prenda de partida que encaja, que no salga nada por culpa de la
+    # capa es peor que enseñar el look sin capa y decirlo (visto en el barrido
+    # del armario: una sudadera en Grunge).
+    if (not elegidos and pa is not None and con_encima and not faltan
+            and pa["posicion"] != "encima" and not como_capa):
+        r = generar(prendas, estilo, color_pedido=color_pedido, con_encima=False,
+                    solo_wada=solo_wada, n=n, max_repeticion=max_repeticion,
+                    altura=altura, ancla=ancla, forzar=forzar, semilla=semilla,
+                    manga=manga, largo=largo)
+        if r["outfits"]:
+            r["aviso"] = ("Con algo encima no sale ningún look con tus prendas: "
+                          "te los enseño sin capa.")
+            return r
     if not elegidos and not faltan:
         aviso = ("Con tus prendas no sale ningún conjunto que cumpla todo."
                  + (" Prueba sin color." if color_pedido else "")
@@ -836,6 +933,13 @@ def _choca(estilo: str, p: dict) -> str | None:
         return fuera
     if estilo == "oversize" and p["corte"] != "holgado":
         return "Oversize pide prendas holgadas, y esta no está marcada como holgada."
+    # La misma regla que reglas_estilo: sin esto, el veredicto decía «Encaja en
+    # Grunge» y luego no salía ningún look (visto en el barrido del armario).
+    if estilo == "grunge" and p["tipo"] == "camisa" and p["estampado"] in (
+            "estampado", "logo", "camuflaje"):
+        return "Grunge lleva camisas lisas o de cuadros, no estampadas."
+    if estilo == "rocker" and p.get("sobrecamisa") and not ESTILOS["rocker"]["encima"].get("camisa"):
+        return "Una sobrecamisa ya es una capa, y Rocker pone encima cazadora o chaqueta."
     return None
 
 
@@ -883,9 +987,11 @@ _PETICION = {
         "estilo": {"type": "STRING", "enum": ORDEN_ESTILOS + ["sin_cambio"]},
         "color": {"type": "STRING", "enum": list(COLORES_PEDIDO) + ["ninguno", "sin_cambio"]},
         "encima": {"type": "STRING", "enum": ["si", "no", "sin_cambio"]},
+        "manga": {"type": "STRING", "enum": ["corta", "larga", "cualquiera", "sin_cambio"]},
+        "largo": {"type": "STRING", "enum": ["corto", "largo", "cualquiera", "sin_cambio"]},
         "entendido": {"type": "BOOLEAN"},
     },
-    "required": ["estilo", "color", "encima", "entendido"],
+    "required": ["estilo", "color", "encima", "manga", "largo", "entendido"],
 }
 
 
@@ -902,7 +1008,12 @@ def interpretar_peticion(texto: str, modelo: str | None = None) -> dict:
         "estilo que le corresponde (oficina -> business_casual; cena o cita -> "
         "smart_casual; gimnasio o paseo -> athleisure). color: el color que "
         "pide que aparezca, o \"ninguno\" si pide quitar el color. encima: si "
-        "pide llevar algo encima (frío, chaqueta, capas) o no. Lo que no pida: "
+        "pide llevar algo encima (frío, chaqueta, capas) o no. manga: la de la "
+        "prenda de arriba (\"corta\" o \"larga\"; \"cualquiera\" si pide quitar esa "
+        "condición). largo: el de lo de abajo (\"corto\" = bermudas o shorts, "
+        "\"largo\" = pantalón largo). Calor o verano: manga corta, abajo corto y "
+        "encima no. Frío o invierno: manga larga, abajo largo. «Nada de largo» es "
+        "manga corta y abajo corto. Lo que no pida: "
         f"\"sin_cambio\". entendido: false si no trata de ropa.\n\nPetición: «{texto[:300]}»")
     r = gemini.generar_json(modelo, instr, None, _PETICION)
     out = {"entendido": bool(r.get("entendido"))}
@@ -914,4 +1025,9 @@ def interpretar_peticion(texto: str, modelo: str | None = None) -> dict:
         out["color"] = None
     if r.get("encima") in ("si", "no"):
         out["encima"] = r["encima"] == "si"
+    for campo, validos in (("manga", ("corta", "larga")), ("largo", ("corto", "largo"))):
+        if r.get(campo) in validos:
+            out[campo] = r[campo]
+        elif r.get(campo) == "cualquiera":
+            out[campo] = None
     return out

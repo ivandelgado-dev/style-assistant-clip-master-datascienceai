@@ -33,15 +33,15 @@ Pantalla principal: **Buscar → Desde una foto**.
 
 Se lee de izquierda a derecha, que es el orden en que se usa:
 
-- **A la izquierda, lo que pones tú** (1-3). La foto de referencia, lo que la IA ha visto en ella (como propuesta, con un «¿No es así? Cámbialo») y dos controles: qué partes buscar y qué pesa más en el orden.
+- **A la izquierda, lo que pones tú** (1-3 y 7). La foto de referencia, lo que la IA ha visto en ella (como propuesta, con un «¿No es así? Cámbialo»), dos controles (qué partes buscar y qué pesa más en el orden) y, al final, «Pídelo con tus palabras».
 - **A la derecha, lo que te devuelve** (4-6). Una columna por capa del look. Arriba de cada columna, tu prenda más parecida, en grande; debajo, las dos siguientes y un «Ver más». Si el resultado no cumple algo que se ve en la foto, lo dice debajo (5).
-- **Abajo, lo que puedes hacer después** (7). Pedir un cambio con tus palabras («de manga larga», «más oscuro») y volver a buscar.
+- **Al final del panel, lo que puedes hacer después** (7). Pedir un cambio con tus palabras («de manga larga», «más oscuro») y volver a buscar. Esta caja es igual en las dos pantallas, con el mismo nombre, el mismo sitio y el mismo botón, para que se aprenda una vez.
 
 Pantalla secundaria: **Buscar → Por estilo**, la segunda función.
 
 ![Mockup de Por estilo](../assets/05_mockup_por_estilo.png)
 
-Tres pasos numerados a la izquierda (por dónde empiezas, tu prenda, el estilo) y el veredicto justo debajo. A la derecha, los looks, cada uno con su «Por qué», y la valoración «Me lo pondría / No me convence».
+Tres pasos numerados a la izquierda (por dónde empiezas, tu prenda, el estilo) y el veredicto justo debajo. A la derecha, los looks, cada uno con su «Por qué», y la valoración «Me lo pondría / No me convence». Si un look lleva una sudadera o un jersey, incluye también la camiseta que va debajo, marcada como «Debajo».
 
 **Sistema visual.** Lo saqué midiendo, no de memoria: inspeccioné las webs de Zara, Pull&Bear y Bershka con las herramientas del navegador (estilos calculados, tamaños, variables CSS) y me quedé con lo que tienen en común (`docs/sistema_visual.md`):
 
@@ -85,7 +85,7 @@ Recorrido principal (función 1, Desde una foto):
 5. **Elegir qué buscar y qué pesa más.** Por defecto, todo lo que hay en la foto y el orden por parecido.
 6. **Procesamiento** (no se ve). La foto se corta por zonas y por capas. Cada zona pasa por CLIP ViT-B/32 congelado y por la proyección de 128 dimensiones que entrené con DeepFashion, y se compara por coseno solo con las prendas del usuario de esa posición. Antes del parecido van el tipo, la manga y el largo. Ningún LLM decide el orden.
 7. **Resultado.** Una columna por capa, con la mejor candidata, dos alternativas y «Ver más».
-8. **Acción.** Quedarse con lo que sale, mirar más opciones, cambiar a orden por color o por tela, o pedir un cambio con palabras en «¿Algo distinto?».
+8. **Acción.** Quedarse con lo que sale, mirar más opciones, cambiar a orden por color o por tela, o pedir un cambio con palabras en «Pídelo con tus palabras».
 
 Función 2 (Por estilo): eliges una prenda tuya (o «No sé qué ponerme»), eliges estilo, y recibes un veredicto y 8 looks. «Otras propuestas» saca otra tanda, y cada look se puede valorar.
 
@@ -106,7 +106,7 @@ La columna vacía es una decisión, no un fallo. Rellenarla con las diez prendas
 ### 3.3. Experiencia de usuario
 
 - **Jerarquía visual.** Lo primero que se ve es tu prenda, grande. Luego las alternativas, más pequeñas. Los controles quedan a la izquierda y en gris.
-- **Simplicidad.** Por defecto no hay que tocar nada: subes la foto y ya sale un resultado. Lo opcional va plegado («Afinar», «Pídelo con tus palabras»). En *Por estilo* los pasos van numerados porque en una versión anterior se hacía lioso.
+- **Simplicidad.** Por defecto no hay que tocar nada: subes la foto y ya sale un resultado. Lo opcional va plegado («Afinar»). En *Por estilo* los pasos van numerados porque en una versión anterior se hacía lioso.
 - **Consistencia.** Elegir no es lo mismo que actuar. Las opciones marcadas van en burdeos claro y los botones que hacen algo, en negro. Antes el mismo negro servía para las dos cosas y confundía. Tampoco hay verde ni rojo de "bien/mal", porque el modelo no sabe eso.
 - **Contexto y confianza.** No hay porcentajes, pero sí contexto. Cada look dice «Por qué», con las mismas reglas que lo montaron. El veredicto nombra la causa («Camisa de béisbol: formalidad 2/5»). Y el aviso de color dice cuándo la mejor candidata no es del color de la foto.
 - **Control del usuario.** Todo lo que viene de la IA se puede cambiar: el tipo de prenda al subirla, lo que ve en la foto de referencia y la traducción de una petición en texto. Las notas del usuario mandan sobre lo que ve la IA. La regla de altura se puede apagar.
@@ -154,7 +154,7 @@ La columna vacía es una decisión, no un fallo. Rellenarla con las diez prendas
 
 1. **Describir fotos.** Al subir una prenda: tipo, color, tejido, manga, largo, estampado y 13 rasgos de sí/no (capucha, cargo, gráfico grande…). En la referencia: si hay una persona y qué piezas lleva, por capas.
 2. **Traducir texto a opciones.** «Una cena informal, algo en azul» se convierte en {estilo, color, capa}, y esas opciones se ven marcadas en la pantalla y se pueden cambiar.
-3. **Ajustar una búsqueda.** «¿Algo distinto?» traduce «de manga larga» a un cambio en los filtros.
+3. **Ajustar una búsqueda.** «Pídelo con tus palabras» traduce «de manga larga» a un cambio en los filtros, y en *Por estilo* «ropa de verano» a manga corta y abajo corto.
 
 **Lo que no hace nunca es decidir.** No elige qué prenda sale, ni en qué orden, ni qué look se monta. Eso lo deciden los vectores y unas reglas escritas en el código, porque tiene que ser reproducible y evaluable. Si le preguntas dos veces a un modelo de lenguaje, te puede contestar distinto: su formalidad global solo coincide consigo misma en 20 de 30 fotos. Los rasgos concretos coinciden en 27-30 de 30, y por eso uso los rasgos y no su juicio.
 

@@ -818,12 +818,12 @@ CSS = """
   button[data-testid="stBaseButton-secondaryFormSubmit"]:hover:not(:disabled){
     background:var(--ink) !important;color:var(--base) !important;}
   button[data-testid="stBaseButton-secondaryFormSubmit"]:disabled{opacity:.35;}
-  .st-key-est_panel div[data-testid="stTextArea"] textarea{
+  div[data-testid="stTextArea"] textarea{
        font-size:13px !important;line-height:19px !important;padding:10px 12px !important;
        background:#fff !important;color:var(--ink) !important;}
-  .st-key-est_panel div[data-testid="stTextArea"] div[data-baseweb="textarea"]{
+  div[data-testid="stTextArea"] div[data-baseweb="textarea"]{
        border:1px solid var(--line) !important;border-radius:10px !important;}
-  .st-key-est_panel div[data-testid="stTextArea"] div[data-baseweb="textarea"]:focus-within{
+  div[data-testid="stTextArea"] div[data-baseweb="textarea"]:focus-within{
        border-color:var(--burdeos) !important;}
   /* Foto del autor y de perfil: redonda, en lugar del cuadro de iniciales. */
   .ini.foto{width:104px;height:104px;border-radius:50%;overflow:hidden;background:var(--plate);}
@@ -929,5 +929,17 @@ CSS = """
   .lk .lienzo div.suya img{outline:2px solid var(--burdeos);outline-offset:3px;}
   .lk .chip.fuera{background:rgba(123,45,64,.9);color:#fff;}
   .falta{margin-top:18px;font-size:12.5px;line-height:19px;color:var(--muted);max-width:64ch;}
+  /* Tarjeta de look: la ficha blanca iba en absoluto sobre un hueco fijo de
+     124 px; con un «Por qué» de dos líneas crecía y tapaba la foto de abajo
+     (visto en uso: el pantalón salía cortado). Ahora la tarjeta es una
+     columna: las fotos ocupan lo que deja la ficha, y nunca se pisan. */
+  .lk{display:flex;flex-direction:column;}
+  .lk .lienzo{position:relative;inset:auto;flex:1 1 auto;min-height:0;
+       padding:48px 14px 10px 14px;}
+  .lk .lienzo.uno{padding:50px 14px 10px 14px;}
+  .lk .ficha-look{position:relative;left:auto;right:auto;bottom:auto;flex:0 0 auto;
+       margin:0 10px 10px 10px;}
+  /* Cuatro prendas (debajo, arriba, encima, abajo): dos por fila. */
+  .lk.cuatro .lienzo{grid-template-columns:1fr 1fr;}
 </style>
 """

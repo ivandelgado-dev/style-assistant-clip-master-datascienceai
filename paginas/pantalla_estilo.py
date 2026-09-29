@@ -39,11 +39,38 @@ def _aplicar_pendiente():
         st.session_state["est_color"] = pend["color"]
     if "encima" in pend:
         st.session_state["est_encima"] = pend["encima"]
+    if "manga" in pend:
+        st.session_state["est_manga"] = pend["manga"]
+    if "largo" in pend:
+        st.session_state["est_largo"] = pend["largo"]
+    # Qué ha marcado la IA, dicho debajo de la caja: si no, parece que
+    # «Traducir a opciones» no hace nada cuando el cambio está plegado en
+    # «Afinar».
+    hecho = []
+    if "estilo" in pend:
+        hecho.append(outfits.ESTILOS[pend["estilo"]]["nombre"])
+    if "color" in pend:
+        hecho.append(f"color {pend['color']}" if pend["color"] else "sin color")
+    if "encima" in pend:
+        hecho.append("con algo encima" if pend["encima"] else "sin nada encima")
+    if "manga" in pend:
+        hecho.append(f"manga {pend['manga']}" if pend["manga"] else "cualquier manga")
+    if "largo" in pend:
+        hecho.append({"corto": "abajo corto", "largo": "abajo largo"}.get(pend["largo"],
+                                                                          "cualquier largo"))
+    if not pend.get("_texto"):
+        return
+    st.session_state["est_entendido"] = (
+        "Marcado: " + " · ".join(hecho) + "." if hecho else
+        "Lo he entendido, pero no cambia ninguna opción: puedo marcar estilo, color, "
+        "capa encima, manga y largo.")
 
 
 def _tarjeta(o: dict, k: int, estilo: str, prendas: list[dict], arm,
              ancla: int | None = None, forzado: bool = False) -> str:
-    pos = [p for p in ("arriba", "encima", "abajo") if p in o["prendas"]]
+    # «debajo»: la camiseta que va bajo una sudadera o un jersey (ver
+    # outfits.generar). Va primero, como en el cuerpo: de dentro a fuera.
+    pos = [p for p in ("debajo", "arriba", "encima", "abajo") if p in o["prendas"]]
     celdas = []
     for p in pos:
         r = arm.iloc[prendas[o["prendas"][p]]["i"]]
@@ -51,10 +78,12 @@ def _tarjeta(o: dict, k: int, estilo: str, prendas: list[dict], arm,
         # La prenda de partida va en todos los looks: basta un contorno, sin
         # etiquetas encima de la foto.
         suya = " suya" if ancla is not None and o["prendas"][p] == ancla else ""
-        celdas.append(f'<div class="{p}{suya}"><img src="{uri}" alt=""></div>')
+        marca = '<span class="tuya">Debajo</span>' if p == "debajo" else ""
+        celdas.append(f'<div class="{p}{suya}"><img src="{uri}" alt="">{marca}</div>')
     desc = " · ".join(
         f'{busqueda.nombre(prendas[o["prendas"][p]]["tipo"]).lower()}'
         + (f' {prendas[o["prendas"][p]]["color"]}' if prendas[o["prendas"][p]]["color"] else "")
+        + (" (debajo)" if p == "debajo" else "")
         for p in pos)
     wada = ""
     if o["wada"]:
@@ -67,7 +96,7 @@ def _tarjeta(o: dict, k: int, estilo: str, prendas: list[dict], arm,
     # El estilo ya está en el título; en la tarjeta solo se avisa si no cumple.
     chip = (f'<span class="chip fuera">No cumple {_html.escape(nom)}</span>' if forzado
             else "")
-    return (f'<article class="lk {"tres" if len(pos) == 3 else ""}">'
+    return (f'<article class="lk {({3: "tres", 4: "cuatro"}).get(len(pos), "")}">'
             f'{chip}<span class="num">{k:02d}</span>'
             f'<div class="lienzo">{"".join(celdas)}</div>'
             f'<div class="ficha-look"><p class="t">Look {k:02d}</p>'
@@ -128,12 +157,21 @@ def _con_palabras(clave: str) -> None:
     """Petición en palabras: la IA la traduce a estilo, color y capa, que se
     ven marcados abajo y se pueden cambiar. No elige ningún look."""
     from paginas import gemini
+    st.markdown('<div style="height:18px;"></div><p class="rot-f" '
+                'style="margin-bottom:6px;">Pídelo con tus palabras</p>',
+                unsafe_allow_html=True)
     with st.form(clave, clear_on_submit=False, border=False):
-        texto = st.text_area("Petición", placeholder="Una cena informal, algo en azul…",
+        texto = st.text_area("Petición", placeholder="Por ejemplo: una cena informal, "
+                             "algo en azul, ropa de verano…",
                              height=76, max_chars=200, label_visibility="collapsed")
-        enviar = st.form_submit_button("Traducir a opciones", use_container_width=True)
-    st.markdown('<p class="nota-form">La IA solo marca estilo, color y capa por ti; '
-                'los looks los eligen las reglas.</p>', unsafe_allow_html=True)
+        enviar = st.form_submit_button("Aplicar", use_container_width=True)
+    entendido = st.session_state.get("est_entendido")
+    if entendido:
+        st.markdown(f'<p class="nota-form"><b style="color:var(--burdeos);">'
+                    f'{_html.escape(entendido)}</b></p>', unsafe_allow_html=True)
+    st.markdown('<p class="nota-form">La IA marca por ti las opciones de arriba (estilo, '
+                'color, capa, manga y largo); los looks los eligen las reglas.</p>',
+                unsafe_allow_html=True)
     if enviar and texto.strip():
         try:
             r = outfits.interpretar_peticion(texto.strip())
@@ -141,8 +179,9 @@ def _con_palabras(clave: str) -> None:
             st.warning(gemini.resumen_error(e))
             return
         if r and r.get("entendido"):
-            st.session_state["est_pendiente"] = r
+            st.session_state["est_pendiente"] = {**r, "_texto": True}
             st.rerun()
+        st.session_state.pop("est_entendido", None)
         st.info("No lo he entendido como una petición de ropa.")
 
 
@@ -185,12 +224,7 @@ def por_estilo(u: dict, arm, panel, res, pie):
 
         from paginas import gemini
         hay_ia = gemini.disponible()
-        if modo == "libre" and hay_ia:
-            # Sin prenda de partida, decirlo con palabras es lo natural: va
-            # abierto y antes del estilo (visto en uso: plegado no se veía).
-            st.markdown(_paso(2, "Dímelo con palabras"), unsafe_allow_html=True)
-            _con_palabras("est_form_libre")
-        st.markdown(_paso(3 if modo == "prenda" or hay_ia else 2, "Estilo"),
+        st.markdown(_paso(3 if modo == "prenda" else 2, "Estilo"),
                     unsafe_allow_html=True)
         # Con una prenda elegida, los estilos donde encaja llevan una marca:
         # se ve de un vistazo antes de elegir.
@@ -222,6 +256,18 @@ def por_estilo(u: dict, arm, panel, res, pie):
             color = st.pills("Color", list(outfits.COLORES_PEDIDO), selection_mode="single",
                              key="est_color", format_func=NOMBRE_COLOR.get,
                              label_visibility="collapsed")
+            st.markdown('<p class="rot-f" style="margin:10px 0 6px 0;">Manga de arriba</p>',
+                        unsafe_allow_html=True)
+            manga = st.pills("Manga", ["corta", "larga"], selection_mode="single",
+                             key="est_manga", format_func=str.capitalize,
+                             label_visibility="collapsed")
+            st.markdown('<p class="rot-f" style="margin:10px 0 6px 0;">Lo de abajo</p>',
+                        unsafe_allow_html=True)
+            largo = st.pills("Largo", ["corto", "largo"], selection_mode="single",
+                             key="est_largo",
+                             format_func={"corto": "Corto (bermuda)",
+                                          "largo": "Largo"}.get,
+                             label_visibility="collapsed")
             st.markdown('<div style="height:8px;"></div>', unsafe_allow_html=True)
             encima = st.toggle("Con algo encima", key="est_encima")
             st.markdown('<p class="nota-form ayuda">Añade una capa: chaqueta, blazer, '
@@ -240,28 +286,33 @@ def por_estilo(u: dict, arm, panel, res, pie):
                             'entre arriba y abajo. No quita ninguno.</p>',
                             unsafe_allow_html=True)
         activo = ([NOMBRE_COLOR[color]] if color else []) \
+            + ([f"manga {manga}"] if manga else []) \
+            + ([f"abajo {largo}"] if largo else []) \
             + (["con capa"] if encima else []) + (["solo Wada"] if solo_wada else []) \
             + (["alargar"] if usar_altura else [])
         if activo:
             st.markdown(f'<p class="nota-form">Activo: {" · ".join(activo)}</p>',
                         unsafe_allow_html=True)
 
-        # Con una prenda elegida, la petición en palabras es secundaria.
-        if modo == "prenda" and hay_ia:
-            with st.expander("Pídelo con tus palabras"):
-                _con_palabras("est_form")
+        # Pedirlo con palabras: abierto y al final del panel, en los dos modos
+        # y igual que en «Desde una foto». Antes era el paso 2 en un modo y un
+        # desplegable en el otro, y en Buscar otra caja distinta.
+        if hay_ia:
+            _con_palabras("est_form")
 
     # ---------------------------------------------------------- resultados
     with res:
         _resultados(u, arm, prendas, modo, pa, estilo, color, encima, solo_wada,
-                    altura if usar_altura else None)
+                    altura if usar_altura else None, manga, largo)
     pie()
 
 
-def _resultados(u, arm, prendas, modo, pa, estilo, color, encima, solo_wada, altura):
+def _resultados(u, arm, prendas, modo, pa, estilo, color, encima, solo_wada, altura,
+                manga=None, largo=None):
     # «Otras propuestas» sortea con una semilla; cualquier cambio en la petición
     # vuelve a la primera tanda (la determinista).
-    firma = (modo, pa["id"] if pa else None, estilo, color, encima, solo_wada, altura)
+    firma = (modo, pa["id"] if pa else None, estilo, color, encima, solo_wada, altura,
+             manga, largo)
     if st.session_state.get("est_firma") != firma:
         st.session_state["est_firma"] = firma
         st.session_state["est_semilla"] = 0
@@ -310,7 +361,8 @@ def _resultados(u, arm, prendas, modo, pa, estilo, color, encima, solo_wada, alt
 
     r = outfits.generar(prendas, estilo, color_pedido=color, con_encima=encima,
                         solo_wada=solo_wada, altura=altura,
-                        ancla=pa["i"] if pa else None, forzar=forzado, semilla=semilla)
+                        ancla=pa["i"] if pa else None, forzar=forzado, semilla=semilla,
+                        manga=manga, largo=largo)
 
     nom = outfits.ESTILOS[estilo]["nombre"]
     titulo = (f"{nom} con tu {_nombre_prenda(pa).lower()}" if pa else f"{nom}, con tu ropa")
@@ -362,22 +414,35 @@ def _valorar(u: dict, looks: list[dict], estilo: str, color, prendas: list[dict]
            for k, o in enumerate(looks)}
     claves = {k: (estilo + "|" + ",".join(f"{p}:{v[p]}" for p in sorted(v)))
               for k, v in ids.items()}
+    # Las valoraciones se guardan (son las que permitirían medir las reglas),
+    # pero al volver a la página los botones salen vacíos: marcados, parecía
+    # que la app había elegido por ti. Se dice cuántas hay ya y, si se marca
+    # otra vez, cuenta lo último.
     hechas = armario.valoraciones(BD_USUARIOS, u["id"])
-    si_def = [k for k in ids if hechas.get(claves[k]) == 1]
-    no_def = [k for k in ids if hechas.get(claves[k]) == -1]
+    previas = sum(1 for k in ids if claves[k] in hechas)
     firma = f"{estilo}|{color}|" + "|".join(claves.values())
+    guardadas = st.session_state.setdefault(f"est_guardadas_{hash(firma)}", set())
 
     st.markdown('<div style="height:8px;"></div><p class="rot-f" style="margin-bottom:6px;">'
                 '¿Te los pondrías?</p>', unsafe_allow_html=True)
+    if previas:
+        st.markdown(f'<p class="nota-form" style="margin-bottom:6px;">Ya habías valorado '
+                    f'{previas} de estos looks. Si los marcas otra vez, cuenta lo último.</p>',
+                    unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        si = st.pills("Me lo pondría", list(ids), selection_mode="multi", default=si_def,
+        si = st.pills("Me lo pondría", list(ids), selection_mode="multi",
                       key=f"est_si_{hash(firma)}", format_func=lambda k: f"{k:02d}")
     with c2:
-        no = st.pills("No me convence", list(ids), selection_mode="multi", default=no_def,
+        no = st.pills("No me convence", list(ids), selection_mode="multi",
                       key=f"est_no_{hash(firma)}", format_func=lambda k: f"{k:02d}")
-    cambios = [(k, 1) for k in si if k not in si_def] + [(k, -1) for k in no if k not in no_def]
+    # Solo lo nuevo de esta visita: sin esto, cada repintado volvía a guardar.
+    ambos = set(si) & set(no)      # marcado en los dos: no se sabe, no se guarda
+    cambios = [(k, r) for k, r in [(k, 1) for k in si] + [(k, -1) for k in no]
+               if k not in ambos and (claves[k], r) not in guardadas]
     for k, rating in cambios:
+        guardadas.discard((claves[k], -rating))
+        guardadas.add((claves[k], rating))
         o = looks[k - 1]
         armario.valorar_outfit(BD_USUARIOS, u["id"], ids[k], rating, estilo=estilo,
                                color=color, puntos=o["puntos"], wada=o["wada"],

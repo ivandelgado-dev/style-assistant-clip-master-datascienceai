@@ -60,7 +60,7 @@ for est in outfits.ORDEN_ESTILOS:
         continue
     r = outfits.generar(prendas, est)
     E = outfits.ESTILOS[est]
-    ok = all(prendas[o["prendas"][pos]]["tipo"] in E[pos]
+    ok = all(prendas[o["prendas"][pos]]["tipo"] in E["arriba" if pos == "debajo" else pos]
              for o in r["outfits"] for pos in o["prendas"])
     check(f"{est}: tipos permitidos ({len(r['outfits'])} outfits)", ok)
 
@@ -218,6 +218,61 @@ check("rasgo deportiva solo: tope 2 (el 1 lo dan las palabras)",
       F("cazadora", "liso", None, None, "cazadora bomber", rasgos={"deportiva": True})[0] == 2)
 check("logo discreto (rasgo): no es gráfico",
       F("polo", "logo", None, None, "", rasgos={"logo_discreto": True})[0] == 3)
+
+print("\n=== 6f. Manga y largo pedidos («ropa de verano, nada de largo») ===")
+def conm(p, corta):
+    return dict(p, manga_corta=corta)
+ver = [conm(prendas[0], True), conm(prendas[1], False), conm(prendas[9], True),
+       conm(prendas[4], False), conm(prendas[10], False), conm(prendas[5], False)]
+for k, p in enumerate(ver):
+    p["i"] = k
+r = outfits.generar(ver, "casual", manga="corta", largo="corto")
+ok = r["outfits"] and all(ver[o["prendas"]["arriba"]]["manga_corta"]
+                          and ver[o["prendas"]["abajo"]]["tipo"] == "bermuda"
+                          for o in r["outfits"])
+check("manga corta + abajo corto: solo eso", bool(ok), f"({len(r['outfits'])} looks)")
+r = outfits.generar(ver, "casual", largo="largo")
+check("abajo largo: sin bermudas", r["outfits"] and all(
+    ver[o["prendas"]["abajo"]]["tipo"] != "bermuda" for o in r["outfits"]))
+sin_b = [p for p in ver if p["tipo"] != "bermuda"]
+for k, p in enumerate(sin_b):
+    p["i"] = k
+r = outfits.generar(sin_b, "casual", largo="corto")
+check("sin bermudas y pide corto: lo dice, no inventa",
+      not r["outfits"] and r["aviso"] and "abajo corto" in r["aviso"])
+check("sin pedir nada: igual que antes",
+      len(outfits.generar(ver, "casual")["outfits"]) >= len(
+          outfits.generar(ver, "casual", manga="corta")["outfits"]))
+
+print("\n=== 6g. Sudadera o jersey: qué va debajo ===")
+todas = [o for est in outfits.ORDEN_ESTILOS if est != "oversize"
+         for o in outfits.generar(prendas, est)["outfits"]]
+medias = [o for o in todas if prendas[o["prendas"]["arriba"]]["tipo"] in ("sudadera", "jersey", "cardigan")]
+check("hay looks con sudadera", len(medias) > 0, f"({len(medias)})")
+check("toda sudadera/jersey lleva algo debajo (o lo dice)",
+      all("debajo" in o["prendas"] or any("debajo" in r for r in o["razones"]) for o in medias))
+check("lo de debajo es una base: camiseta, polo o camisa",
+      all(prendas[o["prendas"]["debajo"]]["tipo"] in ("camiseta", "polo", "camisa")
+          for o in medias if "debajo" in o["prendas"]))
+check("una camiseta suelta no lleva «debajo»",
+      all("debajo" not in o["prendas"] for o in todas
+          if prendas[o["prendas"]["arriba"]]["tipo"] == "camiseta"))
+check("sin prendas repetidas en un look",
+      all(len(set(o["prendas"].values())) == len(o["prendas"]) for o in todas))
+r = outfits.generar(prendas, "streetwear", ancla=3)
+check("partiendo de la sudadera: todos con algo debajo",
+      r["outfits"] and all("debajo" in o["prendas"] for o in r["outfits"]))
+
+print("\n=== 6h. Camisa de partida que el estilo lleva encima (Grunge) ===")
+r = outfits.generar(prendas, "grunge", ancla=2)
+check("Grunge con una camisa: salen looks", len(r["outfits"]) > 0, f"({len(r['outfits'])})")
+check("la camisa va encima y debajo hay una camiseta",
+      r["outfits"] and all(o["prendas"].get("encima") == 2
+                           and prendas[o["prendas"]["arriba"]]["tipo"] == "camiseta"
+                           for o in r["outfits"]))
+r = outfits.generar(prendas, "casual", ancla=2)
+check("en Casual la camisa sigue siendo lo de arriba",
+      r["outfits"] and all(o["prendas"]["arriba"] == 2 for o in r["outfits"]))
 
 print("\n=== 7. Valoraciones ===")
 tmp = pathlib.Path(tempfile.mkdtemp())
