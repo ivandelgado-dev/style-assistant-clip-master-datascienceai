@@ -201,7 +201,7 @@ def inicio():
                     'mismo color o tela si lo pides.</p>',
                     '<div class="n">04</div><h3>Por estilo</h3>'
                     '<p>Eliges un estilo y, si quieres, un color. Los '
-                    'conjuntos los montan reglas de estilista que escribí yo, '
+                    'conjuntos los montan reglas sacadas de guías de estilo, '
                     'con las paletas de Sanzo Wada, un diccionario japonés de '
                     'combinaciones de color.</p>']),
                 unsafe_allow_html=True)

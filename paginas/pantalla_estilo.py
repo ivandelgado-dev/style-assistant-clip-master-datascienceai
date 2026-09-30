@@ -401,7 +401,7 @@ def _resultados(u, arm, prendas, modo, pa, estilo, color, encima, solo_wada, alt
     if r["outfits"]:
         _valorar(u, r["outfits"], estilo, color, prendas)
     st.markdown('<p class="falta" style="font-size:11.5px;">Cómo se eligen: '
-                'reglas de estilista escritas en el código (qué prendas encajan '
+                'reglas sacadas de guías de estilo y pasadas a código (qué prendas encajan '
                 'en cada estilo, cuántos colores, qué estampados) y, si cuadra, '
                 'una paleta de Wada. «Otras propuestas» sortea entre los buenos '
                 'en proporción a su puntuación. La IA solo traduce lo que pides '
