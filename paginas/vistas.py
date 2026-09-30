@@ -1337,8 +1337,14 @@ def buscar():
         piezas_ref = (etq_ref or {}).get("piezas") or []
         pz = pz_capa or _etq.pieza(etq_ref, p) or (
             piezas_ref[0] if tipo == "prenda" and len(piezas_ref) == 1 else None)
+        # Un ajuste solo toca la columna de la que habla («pantalón corto»
+        # no reordena la sudadera). aplicar_ajuste devuelve la MISMA pieza
+        # si no le afecta. Visto en uso: pedir «pantalones cortos» cambiaba
+        # la sudadera, porque cualquier ajuste reordenaba todas las columnas.
+        pz_antes = pz
         for aj in ajustes:
             pz = _etq.aplicar_ajuste(pz, p, aj)
+        tocada = pz is not pz_antes
         caja = None
         if tipo == "persona":
             caja = cajas["abajo"] if p == "abajo" else cajas["arriba"]
@@ -1349,7 +1355,7 @@ def buscar():
         # Lo de debajo de una capa abierta no puede ser otra capa exterior.
         bajo_capa = p == "arriba" and tipo == "persona" and hay_abierta
         mascara = (busqueda.candidatos(pos_arm, etqs, p, pz, bajo_capa)
-                   if (estructura or ajustes) and pz else None)
+                   if (estructura or tocada) and pz else None)
         idx, _ = busqueda.ordenar(V_arm, pos_arm, busqueda.vector(datos, caja),
                                   p, ruta, mascara)
         leido = lab_ref = None
@@ -1363,7 +1369,7 @@ def buscar():
                 idx = busqueda.ordenar_por_color(idx, labs, lab_ref, umbrales)
         # Un ajuste explícito ordena SIEMPRE por etiquetas: es una petición
         # del usuario, no una conjetura.
-        if pz and (busqueda.ORDEN_ETIQUETAS or ajustes):
+        if pz and (busqueda.ORDEN_ETIQUETAS or tocada):
             idx = busqueda.ordenar_por_etiquetas(idx, etqs, pz)
             if not busqueda.ORDEN_COLOR:
                 leido = None      # el color leído no ha contado: no se enseña

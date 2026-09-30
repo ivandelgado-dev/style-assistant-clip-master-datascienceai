@@ -559,12 +559,19 @@ def aplicar_ajuste(pz: dict | None, posicion: str, ajuste: dict) -> dict | None:
     """La pieza buscada con los cambios del ajuste, si le afectan."""
     if not ajuste.get("entendido") or ajuste["posicion"] not in ("todas", posicion):
         return pz
+    # El largo es de lo de abajo y la manga de lo de arriba: «pantalón corto»
+    # dicho para «todas» no convierte la sudadera en corta.
+    campos = [c for c in ("tipo", "manga", "largo", "color", "estampado", "tejido")
+              if c in ajuste
+              and not (c == "largo" and posicion != "abajo")
+              and not (c == "manga" and posicion == "abajo")]
+    if not campos:
+        return pz
     base = dict(pz) if pz else {"posicion": posicion, "tipo": None, "manga": None,
                                 "largo": None, "color": None, "estampado": None,
                                 "tejido": None}
-    for campo in ("tipo", "manga", "largo", "color", "estampado", "tejido"):
-        if campo in ajuste:
-            base[campo] = ajuste[campo]
+    for campo in campos:
+        base[campo] = ajuste[campo]
     return base
 
 

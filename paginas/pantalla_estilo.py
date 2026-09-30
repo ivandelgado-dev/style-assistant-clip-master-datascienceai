@@ -23,12 +23,28 @@ from paginas.nucleo import BD_USUARIOS, dato_uri
 NOMBRE_COLOR = {k: k.capitalize() for k in outfits.COLORES_PEDIDO}
 
 
+_NADA = "__sin_valor__"
+_CLAVES_TEXTO = ("est_estilo", "est_ultimo", "est_encima", "est_color",
+                 "est_manga", "est_largo")
+
+
 def _aplicar_pendiente():
     """Lo que la IA ha entendido de la petición se aplica ANTES de pintar los
     controles: Streamlit no deja cambiar el valor de un control ya pintado."""
+    if st.session_state.pop("est_quitar", False):
+        for k, v in st.session_state.pop("est_antes", {}).items():
+            if v == _NADA:
+                st.session_state.pop(k, None)
+            else:
+                st.session_state[k] = v
+        st.session_state.pop("est_entendido", None)
     pend = st.session_state.pop("est_pendiente", None)
     if not pend:
         return
+    # Lo que había antes del PRIMER texto, para que «Quitar» lo deshaga todo.
+    if pend.get("_texto") and "est_antes" not in st.session_state:
+        st.session_state["est_antes"] = {k: st.session_state.get(k, _NADA)
+                                         for k in _CLAVES_TEXTO}
     if "estilo" in pend:
         st.session_state["est_estilo"] = pend["estilo"]
         st.session_state["est_ultimo"] = pend["estilo"]
@@ -160,18 +176,21 @@ def _con_palabras(clave: str) -> None:
     st.markdown('<div style="height:18px;"></div><p class="rot-f" '
                 'style="margin-bottom:6px;">Pídelo con tus palabras</p>',
                 unsafe_allow_html=True)
-    with st.form(clave, clear_on_submit=False, border=False):
+    with st.form(clave, clear_on_submit=True, border=False):
         texto = st.text_area("Petición", placeholder="Por ejemplo: una cena informal, "
                              "algo en azul, ropa de verano…",
                              height=76, max_chars=200, label_visibility="collapsed")
         enviar = st.form_submit_button("Aplicar", use_container_width=True)
-    entendido = st.session_state.get("est_entendido")
-    if entendido:
-        st.markdown(f'<p class="nota-form"><b style="color:var(--burdeos);">'
-                    f'{_html.escape(entendido)}</b></p>', unsafe_allow_html=True)
     st.markdown('<p class="nota-form">La IA marca por ti las opciones de arriba (estilo, '
                 'color, capa, manga y largo); los looks los eligen las reglas.</p>',
                 unsafe_allow_html=True)
+    entendido = st.session_state.get("est_entendido")
+    if entendido:
+        st.markdown(f'<p class="nota-form" style="margin:0;"><b style="color:var(--burdeos);">'
+                    f'{_html.escape(entendido)}</b></p>', unsafe_allow_html=True)
+        if st.button("Quitar", type="tertiary", key=f"{clave}_quitar"):
+            st.session_state["est_quitar"] = True
+            st.rerun()
     if enviar and texto.strip():
         try:
             r = outfits.interpretar_peticion(texto.strip())
@@ -334,7 +353,7 @@ def _resultados(u, arm, prendas, modo, pa, estilo, color, encima, solo_wada, alt
         titulo = (f"Encaja en {nom}" if v["nivel"] else f"No es {nom}")
         st.markdown(
             f'<div class="veredicto {"ok" if v["nivel"] else "no"}">'
-            f'<span class="marca">{"✓" if v["nivel"] else "✕"}</span><div>'
+            f'<span class="icono">{"✓" if v["nivel"] else "✕"}</span><div>'
             f'<p class="vt">{_html.escape(titulo)}</p>'
             + "".join(f'<p class="vr">{_html.escape(x)}</p>' for x in v["razones"])
             + '</div></div>', unsafe_allow_html=True)

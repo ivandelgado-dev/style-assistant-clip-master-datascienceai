@@ -916,10 +916,10 @@ CSS = """
        padding:18px 20px;border-radius:14px;max-width:70ch;}
   .veredicto.ok{background:#E7EDE2;}
   .veredicto.no{background:#F1E1E1;}
-  .veredicto .marca{flex:0 0 34px;height:34px;border-radius:50%;display:flex;
+  .veredicto .icono{flex:0 0 34px;height:34px;border-radius:50%;display:flex;
        align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;}
-  .veredicto.ok .marca{background:#4E6B45;}
-  .veredicto.no .marca{background:var(--burdeos);}
+  .veredicto.ok .icono{background:#4E6B45;}
+  .veredicto.no .icono{background:var(--burdeos);}
   .veredicto .vt{font-size:17px;font-weight:600;margin:4px 0 4px 0;color:var(--ink);}
   .veredicto .vr{font-size:13px;line-height:20px;margin:0;color:var(--muted);}
   .lk .lienzo div{position:relative;}
